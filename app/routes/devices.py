@@ -180,85 +180,129 @@ async def register_device(request: Request, data: DeviceRegistration):
 
     Called by the Raspberry Pi during setup.
     """
-    # Validate token
-    async with aiosqlite.connect(DB_PATH) as db:
-        db.row_factory = aiosqlite.Row
-        async with db.execute(
-            """SELECT * FROM registration_tokens
-               WHERE token = ? AND used_at IS NULL""",
-            (data.registration_token,)
-        ) as cursor:
-            token_data = await cursor.fetchone()
+    try:
+        # Validate token
+        async with aiosqlite.connect(DB_PATH) as db:
+            db.row_factory = aiosqlite.Row
 
-    if not token_data:
-        return DeviceRegistrationResponse(
-            success=False,
-            error="Invalid or used registration token"
-        )
+            # Check if device already exists
+            async with db.execute(
+                "SELECT device_id, api_key, shop_id FROM devices WHERE device_id = ?",
+                (data.device_id,)
+            ) as cursor:
+                existing_device = await cursor.fetchone()
 
-    token_data = dict(token_data)
+            if existing_device:
+                existing_device = dict(existing_device)
+                logger.info(f"Device {data.device_id} already registered, returning existing credentials")
 
-    # Check expiry
-    expires_at = datetime.fromisoformat(token_data['expires_at'])
-    if datetime.utcnow() > expires_at:
-        return DeviceRegistrationResponse(
-            success=False,
-            error="Registration token expired"
-        )
+                # Device already registered - return existing API key
+                host = request.headers.get('host', 'localhost:8000')
+                scheme = 'wss' if request.url.scheme == 'https' else 'ws'
+                tunnel_url = f"{scheme}://{host}/ws"
 
-    # Generate API key
-    api_key = f"sk_{secrets.token_urlsafe(32)}"
+                return DeviceRegistrationResponse(
+                    success=True,
+                    device_id=data.device_id,
+                    api_key=existing_device['api_key'],
+                    tunnel_url=tunnel_url
+                )
 
-    # Create device record
-    async with aiosqlite.connect(DB_PATH) as db:
-        # Insert device
-        await db.execute(
-            """INSERT INTO devices
-               (device_id, shop_id, name, mac_address, api_key, fingerprint, registered_at, status)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (
-                data.device_id,
-                token_data['shop_id'],
-                token_data['device_name'],
-                data.mac_address,
-                api_key,
-                data.fingerprint,
-                datetime.utcnow().isoformat(),
-                'offline'
+            # Find valid registration token
+            async with db.execute(
+                """SELECT * FROM registration_tokens
+                   WHERE token = ? AND used_at IS NULL""",
+                (data.registration_token,)
+            ) as cursor:
+                token_data = await cursor.fetchone()
+
+        if not token_data:
+            return DeviceRegistrationResponse(
+                success=False,
+                error="Invalid or used registration token"
             )
+
+        token_data = dict(token_data)
+
+        # Check expiry
+        expires_at = datetime.fromisoformat(token_data['expires_at'])
+        if datetime.utcnow() > expires_at:
+            return DeviceRegistrationResponse(
+                success=False,
+                error="Registration token expired"
+            )
+
+        # Generate API key
+        api_key = f"sk_{secrets.token_urlsafe(32)}"
+
+        # Create device record
+        async with aiosqlite.connect(DB_PATH) as db:
+            try:
+                # Insert device
+                await db.execute(
+                    """INSERT INTO devices
+                       (device_id, shop_id, name, mac_address, api_key, fingerprint, registered_at, status)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        data.device_id,
+                        token_data['shop_id'],
+                        token_data['device_name'],
+                        data.mac_address,
+                        api_key,
+                        data.fingerprint,
+                        datetime.utcnow().isoformat(),
+                        'offline'
+                    )
+                )
+
+                # Mark token as used
+                await db.execute(
+                    """UPDATE registration_tokens
+                       SET used_at = ?, used_by_device = ?
+                       WHERE token = ?""",
+                    (datetime.utcnow().isoformat(), data.device_id, data.registration_token)
+                )
+
+                await db.commit()
+            except aiosqlite.IntegrityError as e:
+                logger.warning(f"Device registration integrity error: {e}")
+                return DeviceRegistrationResponse(
+                    success=False,
+                    error=f"Device or MAC address already registered"
+                )
+
+        # Log audit (don't fail registration if audit fails)
+        try:
+            await log_audit(
+                action="device_registered",
+                device_id=data.device_id,
+                shop_id=token_data['shop_id'],
+                details=f"MAC: {data.mac_address}",
+                ip_address=request.client.host
+            )
+        except Exception as audit_error:
+            logger.warning(f"Audit log failed (non-critical): {audit_error}")
+
+        logger.info(f"Device registered: {data.device_id}")
+
+        # Construct tunnel URL
+        host = request.headers.get('host', 'localhost:8000')
+        scheme = 'wss' if request.url.scheme == 'https' else 'ws'
+        tunnel_url = f"{scheme}://{host}/ws"
+
+        return DeviceRegistrationResponse(
+            success=True,
+            device_id=data.device_id,
+            api_key=api_key,
+            tunnel_url=tunnel_url
         )
 
-        # Mark token as used
-        await db.execute(
-            """UPDATE registration_tokens
-               SET used_at = ?, used_by_device = ?
-               WHERE token = ?""",
-            (datetime.utcnow().isoformat(), data.device_id, data.registration_token)
+    except Exception as e:
+        logger.error(f"Registration error for {data.device_id}: {e}", exc_info=True)
+        return DeviceRegistrationResponse(
+            success=False,
+            error=f"Registration failed: {str(e)}"
         )
-
-        await db.commit()
-
-    await log_audit(
-        action="device_registered",
-        device_id=data.device_id,
-        shop_id=token_data['shop_id'],
-        details=f"MAC: {data.mac_address}",
-        ip_address=request.client.host
-    )
-
-    logger.info(f"Device registered: {data.device_id}")
-
-    # Construct tunnel URL
-    host = request.headers.get('host', 'localhost:8000')
-    scheme = 'wss' if request.url.scheme == 'https' else 'ws'
-    tunnel_url = f"{scheme}://{host}/ws"
-
-    return DeviceRegistrationResponse(
-        success=True,
-        device_id=data.device_id,
-        api_key=api_key,
-        tunnel_url=tunnel_url
-    )
 
 
 @router.delete("/{device_id}")
