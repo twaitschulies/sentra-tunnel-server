@@ -8,9 +8,10 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from .routes import auth, portal, devices, commands
@@ -91,6 +92,63 @@ app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(portal.router, tags=["Portal"])
 app.include_router(devices.router, prefix="/api/devices", tags=["Devices"])
 app.include_router(commands.router, prefix="/api/commands", tags=["Commands"])
+
+
+# Exception handlers for HTML pages
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Handle HTTP exceptions - redirect to login for 401, show error page for others."""
+    # Check if this is an API request (expects JSON)
+    accept = request.headers.get("accept", "")
+    if "application/json" in accept or request.url.path.startswith("/api/"):
+        # Return JSON for API requests
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail}
+        )
+
+    # For HTML pages, redirect to login on 401
+    if exc.status_code == 401:
+        return RedirectResponse(url="/login", status_code=302)
+
+    # For other errors, show error page
+    return templates.TemplateResponse(
+        "pages/error.html",
+        {
+            "request": request,
+            "user": None,
+            "error": exc.detail,
+            "error_code": exc.status_code
+        },
+        status_code=exc.status_code
+    )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    """Handle unexpected exceptions."""
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+
+    # Check if this is an API request
+    accept = request.headers.get("accept", "")
+    if "application/json" in accept or request.url.path.startswith("/api/"):
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"}
+        )
+
+    return templates.TemplateResponse(
+        "pages/error.html",
+        {
+            "request": request,
+            "user": None,
+            "error": str(exc),
+            "error_code": 500
+        },
+        status_code=500
+    )
 
 
 @app.get("/health")
