@@ -13,7 +13,10 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from .auth import get_current_user, require_auth
-from ..models.database import get_user_shops, get_devices_by_shop, get_all_shops
+from ..models.database import (
+    get_user_shops, get_devices_by_shop, get_all_shops,
+    create_shop, create_registration_token, get_shop_by_id
+)
 
 logger = logging.getLogger(__name__)
 
@@ -157,3 +160,97 @@ async def device_view(request: Request, device_id: str, user: dict = Depends(req
             "device": device
         }
     )
+
+
+# Admin routes
+@router.get("/admin", response_class=HTMLResponse)
+async def admin_page(request: Request, user: dict = Depends(require_auth)):
+    """
+    Admin page - manage shops and devices.
+    """
+    if user.get('role') != 'admin':
+        return RedirectResponse(url="/dashboard", status_code=302)
+
+    shops = await get_all_shops()
+
+    # Enrich with device counts
+    for shop in shops:
+        devices = await get_devices_by_shop(shop['id'])
+        shop['device_count'] = len(devices)
+        shop['devices'] = devices
+
+    return templates.TemplateResponse(
+        "pages/admin.html",
+        {
+            "request": request,
+            "user": user,
+            "shops": shops
+        }
+    )
+
+
+@router.post("/admin/shop/create")
+async def create_shop_route(request: Request, user: dict = Depends(require_auth)):
+    """Create a new shop."""
+    if user.get('role') != 'admin':
+        return RedirectResponse(url="/dashboard", status_code=302)
+
+    form = await request.form()
+    shop_id = form.get('shop_id', '').strip().lower().replace(' ', '_')
+    shop_name = form.get('shop_name', '').strip()
+
+    if shop_id and shop_name:
+        try:
+            await create_shop(shop_id, shop_name)
+            logger.info(f"Shop created: {shop_id} ({shop_name})")
+        except Exception as e:
+            logger.error(f"Failed to create shop: {e}")
+
+    return RedirectResponse(url="/admin", status_code=302)
+
+
+@router.post("/admin/device/create")
+async def create_device_route(request: Request, user: dict = Depends(require_auth)):
+    """Create a device and registration token."""
+    import secrets
+    from datetime import datetime, timedelta
+
+    if user.get('role') != 'admin':
+        return RedirectResponse(url="/dashboard", status_code=302)
+
+    form = await request.form()
+    shop_id = form.get('shop_id', '').strip()
+    device_name = form.get('device_name', '').strip()
+
+    if shop_id and device_name:
+        # Generate registration token
+        token = f"reg_{secrets.token_urlsafe(24)}"
+        expires_at = (datetime.utcnow() + timedelta(hours=24)).isoformat()
+
+        try:
+            await create_registration_token(token, shop_id, device_name, expires_at)
+            logger.info(f"Registration token created for {device_name} in shop {shop_id}")
+
+            # Show the token to the admin
+            shop = await get_shop_by_id(shop_id)
+            shops = await get_all_shops()
+            for s in shops:
+                devices = await get_devices_by_shop(s['id'])
+                s['device_count'] = len(devices)
+                s['devices'] = devices
+
+            return templates.TemplateResponse(
+                "pages/admin.html",
+                {
+                    "request": request,
+                    "user": user,
+                    "shops": shops,
+                    "new_token": token,
+                    "new_device_name": device_name,
+                    "new_shop_name": shop['name'] if shop else shop_id
+                }
+            )
+        except Exception as e:
+            logger.error(f"Failed to create device: {e}")
+
+    return RedirectResponse(url="/admin", status_code=302)

@@ -218,6 +218,85 @@ async def create_shop(shop_id: str, name: str):
         await db.commit()
 
 
+# Device creation
+async def create_device(device_id: str, shop_id: str, name: str, api_key: str):
+    """Create a new device."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """INSERT INTO devices (device_id, shop_id, name, api_key, status)
+               VALUES (?, ?, ?, ?, 'pending')""",
+            (device_id, shop_id, name, api_key)
+        )
+        await db.commit()
+
+
+async def get_shop_by_id(shop_id: str):
+    """Get shop by ID."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            "SELECT * FROM shops WHERE id = ?", (shop_id,)
+        ) as cursor:
+            row = await cursor.fetchone()
+            return dict(row) if row else None
+
+
+# Registration token operations
+async def create_registration_token(token: str, shop_id: str, device_name: str, expires_at: str):
+    """Create a registration token."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """INSERT INTO registration_tokens (token, shop_id, device_name, expires_at)
+               VALUES (?, ?, ?, ?)""",
+            (token, shop_id, device_name, expires_at)
+        )
+        await db.commit()
+
+
+async def get_registration_token(token: str):
+    """Get registration token."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            "SELECT * FROM registration_tokens WHERE token = ?", (token,)
+        ) as cursor:
+            row = await cursor.fetchone()
+            return dict(row) if row else None
+
+
+async def mark_token_used(token: str, device_id: str):
+    """Mark token as used."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE registration_tokens SET used_at = ?, used_by_device = ? WHERE token = ?",
+            (datetime.utcnow().isoformat(), device_id, token)
+        )
+        await db.commit()
+
+
+async def register_device(device_id: str, shop_id: str, name: str, api_key: str, mac_address: str = None, fingerprint: str = None):
+    """Register a device (from Pi registration)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """INSERT OR REPLACE INTO devices
+               (device_id, shop_id, name, api_key, mac_address, fingerprint, registered_at, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 'offline')""",
+            (device_id, shop_id, name, api_key, mac_address, fingerprint, datetime.utcnow().isoformat())
+        )
+        await db.commit()
+
+
+async def get_device_by_api_key(api_key: str):
+    """Get device by API key."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            "SELECT * FROM devices WHERE api_key = ?", (api_key,)
+        ) as cursor:
+            row = await cursor.fetchone()
+            return dict(row) if row else None
+
+
 # Audit logging
 async def log_audit(
     action: str,
