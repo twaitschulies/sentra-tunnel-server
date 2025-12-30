@@ -204,13 +204,57 @@ EOF
     log_success "Systemd service created"
 }
 
-configure_nginx() {
-    log_info "Configuring Nginx..."
+configure_nginx_http() {
+    log_info "Configuring Nginx (HTTP only for SSL setup)..."
 
     # Prompt for domain if not set
     if [[ -z "$DOMAIN" ]]; then
         read -p "Enter your domain (e.g., tunnel.example.com): " DOMAIN
     fi
+
+    # Create webroot for certbot
+    mkdir -p /var/www/certbot
+
+    # Step 1: HTTP-only config for certbot validation
+    cat > /etc/nginx/sites-available/sentra-tunnel << EOF
+# Sentra Tunnel Server - Nginx Configuration (HTTP only - for SSL setup)
+# Domain: $DOMAIN
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name $DOMAIN;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+
+    # Enable site
+    ln -sf /etc/nginx/sites-available/sentra-tunnel /etc/nginx/sites-enabled/
+    rm -f /etc/nginx/sites-enabled/default
+
+    # Test config
+    nginx -t
+
+    # Reload nginx
+    systemctl reload nginx
+
+    log_success "Nginx HTTP configured"
+}
+
+configure_nginx_ssl() {
+    log_info "Configuring Nginx with SSL..."
 
     cat > /etc/nginx/sites-available/sentra-tunnel << EOF
 # Sentra Tunnel Server - Nginx Configuration
@@ -248,7 +292,7 @@ server {
     listen [::]:443 ssl http2;
     server_name $DOMAIN;
 
-    # SSL configuration (will be configured by certbot)
+    # SSL configuration
     ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
     ssl_session_timeout 1d;
@@ -353,14 +397,13 @@ server {
 }
 EOF
 
-    # Enable site
-    ln -sf /etc/nginx/sites-available/sentra-tunnel /etc/nginx/sites-enabled/
-    rm -f /etc/nginx/sites-enabled/default
-
     # Test config
     nginx -t
 
-    log_success "Nginx configured"
+    # Reload nginx
+    systemctl reload nginx
+
+    log_success "Nginx SSL configured"
 }
 
 setup_ssl() {
@@ -538,13 +581,14 @@ main() {
     setup_virtualenv
     configure_permissions
     create_systemd_service
-    configure_nginx
-    setup_ssl
+    configure_nginx_http      # Step 1: HTTP only (for certbot)
     configure_firewall
     configure_fail2ban
     setup_logrotate
     initialize_database
-    start_services
+    start_services            # Step 2: Start app before SSL setup
+    setup_ssl                 # Step 3: Get SSL certificate
+    configure_nginx_ssl       # Step 4: Enable full SSL config
 
     show_summary
 }
