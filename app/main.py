@@ -30,6 +30,10 @@ TEMPLATES_DIR = BASE_DIR / 'app' / 'templates'
 STATIC_DIR = BASE_DIR / 'app' / 'static'
 DATA_DIR = BASE_DIR / 'data'
 
+# Ensure directories exist
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
 # Global tunnel broker instance
 tunnel_broker: TunnelBroker = None
 
