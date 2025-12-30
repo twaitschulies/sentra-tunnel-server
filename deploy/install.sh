@@ -23,6 +23,10 @@ SERVICE_USER="sentra"
 DOMAIN=""
 ADMIN_EMAIL=""
 
+# Determine script location and project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
 # -----------------------------------------------------------------------------
 # Helper Functions
 # -----------------------------------------------------------------------------
@@ -105,9 +109,9 @@ setup_directories() {
 copy_application() {
     log_info "Copying application files..."
 
-    # Copy app directory
-    cp -r app/* "$INSTALL_DIR/app/" 2>/dev/null || true
-    cp requirements.txt "$INSTALL_DIR/"
+    # Copy app directory from project root
+    cp -r "$PROJECT_ROOT/app/"* "$INSTALL_DIR/app/"
+    cp "$PROJECT_ROOT/requirements.txt" "$INSTALL_DIR/"
 
     # Create data directory structure
     mkdir -p "$INSTALL_DIR/data"
