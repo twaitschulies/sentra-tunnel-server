@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block title %}{{ device.name or device.device_id }} - Sentra Guard{% endblock %}
+
+{% block header %}
+<!-- Header with Back Button -->
+<header class="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-200">
+    <div class="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <a href="/shop/{{ device.shop_id }}"
+               class="w-9 h-9 -ml-2 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-smooth">
+                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </a>
+            <span class="font-semibold text-gray-900">{{ device.name or device.device_id }}</span>
+        </div>
+
+        <!-- Online Indicator -->
+        <div class="flex items-center space-x-2">
+            <div class="w-2.5 h-2.5 rounded-full
+                        {% if device.online %}bg-success pulse-dot{% else %}bg-gray-300{% endif %}">
+            </div>
+            <span class="text-sm {% if device.online %}text-success{% else %}text-gray-400{% endif %}">
+                {% if device.online %}Online{% else %}Offline{% endif %}
+            </span>
+        </div>
+    </div>
+</header>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto px-4 py-6" x-data="deviceControl()">
+
+    <!-- Door Visual -->
+    <div class="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 mb-6 text-center">
+        <!-- Door Icon -->
+        <div class="w-24 h-24 mx-auto mb-4 rounded-2xl flex items-center justify-center
+                    {% if device.online and device.last_status.gpio_state %}bg-success/10{% else %}bg-gray-100{% endif %}
+                    transition-smooth">
+            <svg class="w-14 h-14 {% if device.online and device.last_status.gpio_state %}text-success{% else %}text-gray-400{% endif %}"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+            </svg>
+        </div>
+
+        <!-- Status Text -->
+        <p class="text-2xl font-semibold text-gray-900 mb-1">
+            {% if device.online %}
+                {% if device.last_status.gpio_state %}Offen{% else %}Geschlossen{% endif %}
+            {% else %}
+                Offline
+            {% endif %}
+        </p>
+        <p class="text-sm text-gray-500">
+            {% if device.online %}
+                Modus: {{ device.last_status.current_mode | default('Normal') }}
+            {% else %}
+                Letzte Aktivität: {{ device.last_seen | default('Unbekannt') }}
+            {% endif %}
+        </p>
+    </div>
+
+    <!-- Main Action Button -->
+    {% if device.online %}
+    <button @click="openDoor()"
+            :disabled="loading"
+            class="w-full py-4 bg-primary text-white text-lg font-semibold rounded-2xl
+                   hover:bg-primary-hover active:scale-[0.98]
+                   disabled:opacity-50 disabled:cursor-not-allowed
+                   transition-smooth flex items-center justify-center space-x-2 mb-6 min-h-[60px]">
+        <template x-if="loading">
+            <svg class="animate-spin h-6 w-6" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+        </template>
+        <template x-if="success">
+            <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+        </template>
+        <template x-if="!loading && !success">
+            <span>TÜR ÖFFNEN</span>
+        </template>
+    </button>
+    {% else %}
+    <button disabled
+            class="w-full py-4 bg-gray-200 text-gray-500 text-lg font-semibold rounded-2xl cursor-not-allowed mb-6">
+        Gerät offline
+    </button>
+    {% endif %}
+
+    <!-- Divider -->
+    <div class="border-t border-gray-200 my-6"></div>
+
+    <!-- Status Section -->
+    <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">Status</h2>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-100">
+        <div class="px-4 py-3 flex justify-between">
+            <span class="text-gray-600">Modus</span>
+            <span class="font-medium text-gray-900" x-text="status.mode || 'Normal'">
+                {{ device.last_status.current_mode | default('Normal') }}
+            </span>
+        </div>
+        <div class="px-4 py-3 flex justify-between">
+            <span class="text-gray-600">GPIO</span>
+            <span class="font-medium" :class="status.gpio ? 'text-success' : 'text-gray-900'">
+                <span x-text="status.gpio ? 'HIGH (offen)' : 'LOW (zu)'">
+                    {% if device.last_status.gpio_state %}HIGH (offen){% else %}LOW (zu){% endif %}
+                </span>
+            </span>
+        </div>
+        <div class="px-4 py-3 flex justify-between">
+            <span class="text-gray-600">Nächste Änderung</span>
+            <span class="text-gray-900" x-text="status.next_change || '-'">
+                {{ device.last_status.next_mode_change | default('-') }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-6 mb-4">Schnellaktionen</h2>
+
+    <div class="grid grid-cols-2 gap-3">
+        <!-- Override 1h -->
+        <button @click="setOverride('always_open', 1)"
+                :disabled="!online"
+                class="bg-white rounded-xl p-4 shadow-sm border border-gray-100
+                       hover:shadow-md hover:border-gray-200 transition-smooth btn-press
+                       disabled:opacity-50 disabled:cursor-not-allowed text-left">
+            <div class="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center mb-2">
+                <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+                </svg>
+            </div>
+            <p class="font-medium text-gray-900">Override 1h</p>
+            <p class="text-xs text-gray-500">Immer offen</p>
+        </button>
+
+        <!-- Edit Schedule -->
+        <button @click="showScheduleModal = true"
+                :disabled="!online"
+                class="bg-white rounded-xl p-4 shadow-sm border border-gray-100
+                       hover:shadow-md hover:border-gray-200 transition-smooth btn-press
+                       disabled:opacity-50 disabled:cursor-not-allowed text-left">
+            <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
+                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <p class="font-medium text-gray-900">Zeitplan</p>
+            <p class="text-xs text-gray-500">Bearbeiten</p>
+        </button>
+    </div>
+
+    <!-- Device Info -->
+    <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-6 mb-4">Geräteinformationen</h2>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-100">
+        <div class="px-4 py-3 flex justify-between">
+            <span class="text-gray-600">Device ID</span>
+            <span class="font-mono text-sm text-gray-900">{{ device.device_id }}</span>
+        </div>
+        <div class="px-4 py-3 flex justify-between">
+            <span class="text-gray-600">MAC-Adresse</span>
+            <span class="font-mono text-sm text-gray-900">{{ device.mac_address | default('-') }}</span>
+        </div>
+        <div class="px-4 py-3 flex justify-between">
+            <span class="text-gray-600">Registriert</span>
+            <span class="text-gray-900">{{ device.registered_at | default('-') }}</span>
+        </div>
+    </div>
+
+</div>
+
+<script>
+function deviceControl() {
+    return {
+        online: {{ 'true' if device.online else 'false' }},
+        loading: false,
+        success: false,
+        status: {
+            mode: '{{ device.last_status.current_mode | default("Normal") }}',
+            gpio: {{ 'true' if device.last_status.gpio_state else 'false' }},
+            next_change: '{{ device.last_status.next_mode_change | default("-") }}'
+        },
+        showScheduleModal: false,
+
+        async openDoor() {
+            this.loading = true;
+            this.success = false;
+
+            try {
+                const response = await fetch('/api/commands/{{ device.device_id }}/open', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    this.success = true;
+                    // Haptic feedback if available
+                    if (navigator.vibrate) navigator.vibrate(100);
+
+                    setTimeout(() => {
+                        this.success = false;
+                        this.refreshStatus();
+                    }, 2000);
+                } else {
+                    alert(data.error || 'Fehler beim Öffnen');
+                }
+            } catch (e) {
+                alert('Verbindungsfehler');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async setOverride(mode, hours) {
+            try {
+                const response = await fetch(`/api/commands/{{ device.device_id }}/override?mode=${mode}&duration_hours=${hours}`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    this.refreshStatus();
+                } else {
+                    alert(data.error || 'Fehler beim Setzen des Override');
+                }
+            } catch (e) {
+                alert('Verbindungsfehler');
+            }
+        },
+
+        async refreshStatus() {
+            try {
+                const response = await fetch('/api/commands/{{ device.device_id }}/status', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    this.status.mode = data.data.current_mode || 'Normal';
+                    this.status.gpio = data.data.gpio_state || false;
+                    this.status.next_change = data.data.next_mode_change || '-';
+                }
+            } catch (e) {
+                console.error('Status refresh failed:', e);
+            }
+        },
+
+        init() {
+            // Auto-refresh status every 10 seconds
+            if (this.online) {
+                setInterval(() => this.refreshStatus(), 10000);
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

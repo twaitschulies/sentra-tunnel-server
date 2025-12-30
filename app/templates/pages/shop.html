@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}{{ shop_id }} - Sentra Guard{% endblock %}
+
+{% block header %}
+<!-- Header with Back Button -->
+<header class="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-200">
+    <div class="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <a href="/dashboard"
+               class="w-9 h-9 -ml-2 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-smooth">
+                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </a>
+            <span class="font-semibold text-gray-900">{{ shop_id }}</span>
+        </div>
+
+        <!-- Refresh Button -->
+        <button @click="window.location.reload()"
+                class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-smooth">
+            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+        </button>
+    </div>
+</header>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto px-4 py-6" x-data="shopView()">
+
+    <!-- Section Title -->
+    <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">Geräte</h2>
+
+    {% if devices %}
+    <!-- Device Cards -->
+    <div class="space-y-4">
+        {% for device in devices %}
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+            <!-- Device Header -->
+            <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center space-x-3">
+                    <!-- Status Indicator -->
+                    <div class="relative">
+                        <div class="w-3 h-3 rounded-full
+                                    {% if device.online %}bg-success pulse-dot{% else %}bg-gray-300{% endif %}">
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold text-gray-900">{{ device.name or device.device_id }}</h3>
+                        <p class="text-xs text-gray-400 font-mono">{{ device.device_id }}</p>
+                    </div>
+                </div>
+
+                <!-- Settings Link -->
+                <a href="/device/{{ device.device_id }}"
+                   class="text-sm text-primary hover:text-primary-hover transition-smooth">
+                    Details
+                </a>
+            </div>
+
+            <!-- Status Info -->
+            <div class="bg-gray-50 rounded-xl p-3 mb-4">
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-500">Modus</span>
+                    <span class="font-medium
+                                {% if device.last_status.current_mode == 'always_open' %}text-success
+                                {% elif device.last_status.current_mode == 'access_blocked' %}text-danger
+                                {% else %}text-gray-900{% endif %}">
+                        {% if device.online %}
+                            {{ device.last_status.current_mode | default('Normal') }}
+                        {% else %}
+                            Offline
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="flex justify-between text-sm mt-1">
+                    <span class="text-gray-500">Tür</span>
+                    <span class="font-medium">
+                        {% if device.online %}
+                            {% if device.last_status.gpio_state %}Offen{% else %}Geschlossen{% endif %}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Action Button -->
+            {% if device.online %}
+            <button @click="openDoor('{{ device.device_id }}')"
+                    :disabled="loading['{{ device.device_id }}']"
+                    class="w-full py-3 bg-primary text-white font-medium rounded-xl
+                           hover:bg-primary-hover active:scale-[0.98]
+                           disabled:opacity-50 disabled:cursor-not-allowed
+                           transition-smooth flex items-center justify-center space-x-2">
+                <template x-if="loading['{{ device.device_id }}']">
+                    <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                </template>
+                <template x-if="success['{{ device.device_id }}']">
+                    <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </template>
+                <template x-if="!loading['{{ device.device_id }}'] && !success['{{ device.device_id }}']">
+                    <span>Tür öffnen</span>
+                </template>
+            </button>
+            {% else %}
+            <button disabled
+                    class="w-full py-3 bg-gray-200 text-gray-500 font-medium rounded-xl cursor-not-allowed">
+                Offline
+            </button>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-16">
+        <div class="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+        </div>
+        <h3 class="font-medium text-gray-900 mb-1">Keine Geräte</h3>
+        <p class="text-sm text-gray-500">Es sind keine Geräte in diesem Shop registriert.</p>
+    </div>
+    {% endif %}
+
+    {% if user.role == 'admin' %}
+    <!-- Admin: Add Device Button -->
+    <button @click="showAddDevice = true"
+            class="fixed bottom-6 right-6 w-14 h-14 bg-primary text-white rounded-2xl shadow-lg
+                   flex items-center justify-center hover:bg-primary-hover transition-smooth btn-press">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+    </button>
+    {% endif %}
+</div>
+
+<script>
+function shopView() {
+    return {
+        loading: {},
+        success: {},
+        showAddDevice: false,
+
+        async openDoor(deviceId) {
+            this.loading[deviceId] = true;
+            this.success[deviceId] = false;
+
+            try {
+                const response = await fetch(`/api/commands/${deviceId}/open`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    this.success[deviceId] = true;
+                    setTimeout(() => {
+                        this.success[deviceId] = false;
+                    }, 2000);
+                } else {
+                    alert(data.error || 'Fehler beim Öffnen');
+                }
+            } catch (e) {
+                alert('Verbindungsfehler');
+            } finally {
+                this.loading[deviceId] = false;
+            }
+        },
+
+        init() {
+            // Auto-refresh every 10 seconds
+            setInterval(() => {
+                window.location.reload();
+            }, 10000);
+        }
+    }
+}
+</script>
+{% endblock %}
