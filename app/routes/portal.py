@@ -92,35 +92,59 @@ async def shop_view(request: Request, shop_id: str, user: dict = Depends(require
     """
     Shop detail view - shows devices in shop.
     """
-    # Verify access
-    if user.get('role') != 'admin':
-        user_shops = await get_user_shops(user['id'])
-        if not any(s['id'] == shop_id for s in user_shops):
+    try:
+        # Check if shop exists
+        shop = await get_shop_by_id(shop_id)
+        if not shop:
+            logger.warning(f"Shop not found: {shop_id}")
             return RedirectResponse(url="/dashboard", status_code=302)
 
-    # Get devices
-    devices = await get_devices_by_shop(shop_id)
+        # Verify access
+        if user.get('role') != 'admin':
+            user_shops = await get_user_shops(user['id'])
+            if not any(s['id'] == shop_id for s in user_shops):
+                return RedirectResponse(url="/dashboard", status_code=302)
 
-    # Enrich with real-time status
-    broker = request.app.state.tunnel_broker
-    if broker:
-        for device in devices:
-            status = broker.get_device_status(device['device_id'])
-            if status:
-                device['online'] = True
-                device['last_status'] = status.get('last_status', {})
-            else:
-                device['online'] = False
+        # Get devices
+        devices = await get_devices_by_shop(shop_id)
 
-    return templates.TemplateResponse(
-        "pages/shop.html",
-        {
-            "request": request,
-            "user": user,
-            "shop_id": shop_id,
-            "devices": devices
-        }
-    )
+        # Enrich with real-time status
+        broker = request.app.state.tunnel_broker
+        if broker:
+            for device in devices:
+                device_id = device.get('device_id')
+                if device_id:
+                    status = broker.get_device_status(device_id)
+                    if status:
+                        device['online'] = True
+                        device['last_status'] = status.get('last_status', {})
+                    else:
+                        device['online'] = False
+                else:
+                    device['online'] = False
+
+        return templates.TemplateResponse(
+            "pages/shop.html",
+            {
+                "request": request,
+                "user": user,
+                "shop_id": shop_id,
+                "shop": shop,
+                "devices": devices
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error in shop_view for {shop_id}: {e}", exc_info=True)
+        return templates.TemplateResponse(
+            "pages/error.html",
+            {
+                "request": request,
+                "user": user,
+                "error": str(e),
+                "error_code": 500
+            },
+            status_code=500
+        )
 
 
 @router.get("/device/{device_id}", response_class=HTMLResponse)

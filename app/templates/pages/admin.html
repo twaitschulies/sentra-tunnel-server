@@ -137,6 +137,7 @@
                                         <th class="pb-2">Device ID</th>
                                         <th class="pb-2">Status</th>
                                         <th class="pb-2">Zuletzt gesehen</th>
+                                        <th class="pb-2 text-right">Aktionen</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-200">
@@ -160,6 +161,12 @@
                                             {% endif %}
                                         </td>
                                         <td class="py-2 text-gray-500">{{ device.last_seen or '-' }}</td>
+                                        <td class="py-2 text-right">
+                                            <button onclick="deleteDevice('{{ device.device_id }}', '{{ device.name or device.device_id }}')"
+                                                    class="text-red-600 hover:text-red-800 text-sm font-medium">
+                                                Löschen
+                                            </button>
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -186,4 +193,29 @@
 
     </main>
 </div>
+
+<script>
+async function deleteDevice(deviceId, deviceName) {
+    if (!confirm(`Gerät "${deviceName}" wirklich löschen?\n\nDies kann nicht rückgängig gemacht werden.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/devices/${deviceId}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            alert('Gerät erfolgreich gelöscht!');
+            window.location.reload();
+        } else {
+            alert('Fehler: ' + (data.detail || data.error || 'Unbekannter Fehler'));
+        }
+    } catch (e) {
+        alert('Verbindungsfehler: ' + e.message);
+    }
+}
+</script>
 {% endblock %}
