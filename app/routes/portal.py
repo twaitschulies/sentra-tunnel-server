@@ -100,11 +100,17 @@ async def shop_view(request: Request, shop_id: str, user: dict = Depends(require
             logger.warning(f"Shop not found: {shop_id}")
             return RedirectResponse(url="/dashboard", status_code=302)
 
-        # Verify access
+        # Verify access and get permission
+        can_control = True
         if user.get('role') != 'admin':
             user_shops = await get_user_shops(user['id'])
-            if not any(s['id'] == shop_id for s in user_shops):
+            shop_access = next(
+                (s for s in user_shops if s['id'] == shop_id),
+                None
+            )
+            if not shop_access:
                 return RedirectResponse(url="/dashboard", status_code=302)
+            can_control = shop_access.get('permission') == 'control'
 
         # Get devices
         devices = await get_devices_by_shop(shop_id)
@@ -138,7 +144,8 @@ async def shop_view(request: Request, shop_id: str, user: dict = Depends(require
                 "user": user,
                 "shop_id": shop_id,
                 "shop": shop,
-                "devices": devices
+                "devices": devices,
+                "can_control": can_control
             }
         )
     except Exception as e:
