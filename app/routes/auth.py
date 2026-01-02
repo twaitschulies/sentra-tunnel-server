@@ -151,10 +151,9 @@ async def login(request: Request, login_data: LoginRequest, response: Response):
     )
 
 
-@router.post("/logout")
+@router.get("/logout")
 async def logout(
     request: Request,
-    response: Response,
     session_id: Optional[str] = Cookie(None)
 ):
     """Log out and clear session."""
@@ -168,9 +167,10 @@ async def logout(
             ip_address=request.client.host
         )
 
+    response = RedirectResponse(url="/login", status_code=302)
     response.delete_cookie("session_id")
 
-    return {"success": True}
+    return response
 
 
 @router.get("/me")
