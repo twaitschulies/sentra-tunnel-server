@@ -11,7 +11,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Request, Response, HTTPException, Depends, Cookie
 from fastapi.responses import RedirectResponse, JSONResponse
-from passlib.hash import bcrypt
+import bcrypt
 
 from ..models.user import LoginRequest, LoginResponse, User
 from ..models.database import get_user_by_username, log_audit
@@ -96,7 +96,7 @@ async def login(request: Request, login_data: LoginRequest, response: Response):
         return LoginResponse(success=False, error="Invalid credentials")
 
     # Verify password
-    if not bcrypt.verify(password, user['password_hash']):
+    if not bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
         await log_audit(
             action="login_failed",
             user_id=user['id'],

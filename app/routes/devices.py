@@ -305,6 +305,129 @@ async def register_device(request: Request, data: DeviceRegistration):
         )
 
 
+@router.post("/{device_id}/test")
+async def test_device_connection(
+    request: Request,
+    device_id: str,
+    user: dict = Depends(require_auth)
+):
+    """
+    Test device connection and get comprehensive diagnostic info.
+
+    Returns detailed connection status, latency, and device capabilities.
+    """
+    from datetime import datetime
+
+    device = await get_device_by_id(device_id)
+
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    # Check access
+    if user.get('role') != 'admin':
+        from ..models.database import get_user_shops
+        user_shops = await get_user_shops(user['id'])
+        if not any(s['id'] == device.get('shop_id') for s in user_shops):
+            raise HTTPException(status_code=403, detail="Access denied")
+
+    broker = request.app.state.tunnel_broker
+    result = {
+        "device_id": device_id,
+        "device_name": device.get('name'),
+        "shop_id": device.get('shop_id'),
+        "registered": True,
+        "registration_date": device.get('registered_at'),
+        "mac_address": device.get('mac_address'),
+        "tests": {}
+    }
+
+    # Test 1: Check if broker is available
+    if not broker:
+        result["tests"]["broker_available"] = {
+            "success": False,
+            "message": "Tunnel broker not running"
+        }
+        result["online"] = False
+        return result
+
+    result["tests"]["broker_available"] = {
+        "success": True,
+        "message": "Tunnel broker running",
+        "connected_devices": broker.get_stats()["connected_devices"]
+    }
+
+    # Test 2: Check if device is connected
+    if not broker.is_device_online(device_id):
+        result["tests"]["device_connected"] = {
+            "success": False,
+            "message": "Device not connected to tunnel"
+        }
+        result["online"] = False
+        result["last_seen"] = device.get('last_seen')
+        return result
+
+    result["tests"]["device_connected"] = {
+        "success": True,
+        "message": "Device connected"
+    }
+    result["online"] = True
+
+    # Test 3: Get connection details
+    status = broker.get_device_status(device_id)
+    if status:
+        result["connection"] = {
+            "session_id": status.get("session_id"),
+            "connected_at": status.get("connected_at"),
+            "last_heartbeat": status.get("last_heartbeat"),
+            "last_status": status.get("last_status", {})
+        }
+
+    # Test 4: Ping test (send command and measure response time)
+    try:
+        start_time = datetime.utcnow()
+        response = await broker.send_command(
+            device_id=device_id,
+            action="get_status",
+            params={},
+            timeout=10.0
+        )
+        end_time = datetime.utcnow()
+        latency_ms = (end_time - start_time).total_seconds() * 1000
+
+        result["tests"]["ping"] = {
+            "success": response.get("success", False),
+            "latency_ms": round(latency_ms, 2),
+            "response": response.get("data") if response.get("success") else None,
+            "error": response.get("error") if not response.get("success") else None
+        }
+    except TimeoutError:
+        result["tests"]["ping"] = {
+            "success": False,
+            "message": "Command timeout - device not responding"
+        }
+    except Exception as e:
+        result["tests"]["ping"] = {
+            "success": False,
+            "message": f"Ping failed: {str(e)}"
+        }
+
+    # Overall success
+    result["all_tests_passed"] = all(
+        t.get("success", False) for t in result["tests"].values()
+    )
+
+    await log_audit(
+        action="device_test",
+        user_id=user['id'],
+        device_id=device_id,
+        shop_id=device.get('shop_id'),
+        result="success" if result["all_tests_passed"] else "partial",
+        ip_address=request.client.host
+    )
+
+    return result
+
+
 @router.delete("/{device_id}")
 async def delete_device(
     request: Request,

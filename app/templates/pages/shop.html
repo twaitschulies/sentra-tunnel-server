@@ -1,25 +1,30 @@
 {% extends "base.html" %}
 
-{% block title %}{{ shop_id }} - Sentra Guard{% endblock %}
+{% block title %}{{ shop.name }} - Sentra Guard{% endblock %}
 
 {% block header %}
-<!-- Header with Back Button -->
-<header class="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-200">
-    <div class="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+<!-- Header with Glassmorphism -->
+<header class="sticky top-0 z-50 glass-card border-b border-white/20">
+    <div class="max-w-2xl mx-auto px-6 h-16 flex items-center justify-between">
         <div class="flex items-center space-x-3">
             <a href="/dashboard"
-               class="w-9 h-9 -ml-2 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-smooth">
-                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               class="w-10 h-10 -ml-2 flex items-center justify-center rounded-xl
+                      hover:bg-surface-tertiary/50 transition-smooth">
+                <svg class="w-6 h-6 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                 </svg>
             </a>
-            <span class="font-semibold text-gray-900">{{ shop_id }}</span>
+            <div>
+                <span class="font-semibold text-text-primary text-lg">{{ shop.name }}</span>
+                <p class="text-xs text-text-secondary">{{ devices|length }} Geräte</p>
+            </div>
         </div>
 
         <!-- Refresh Button -->
         <button @click="window.location.reload()"
-                class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-smooth">
-            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                class="w-10 h-10 flex items-center justify-center rounded-xl
+                       hover:bg-surface-tertiary/50 transition-smooth">
+            <svg class="w-5 h-5 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
             </svg>
@@ -29,119 +34,226 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-lg mx-auto px-4 py-6" x-data="shopView()">
-
-    <!-- Section Title -->
-    <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">Geräte</h2>
+<div class="max-w-2xl mx-auto px-6 py-8" x-data="shopView()">
 
     {% if devices %}
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-2 gap-4 mb-8">
+        <div class="glass-card rounded-2xl p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-text-secondary font-medium uppercase tracking-wide">Online</p>
+                    <p class="text-2xl font-bold text-success mt-1">{{ devices|selectattr('online')|list|length }}</p>
+                </div>
+                <div class="w-12 h-12 bg-success-light rounded-xl flex items-center justify-center">
+                    <svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        <div class="glass-card rounded-2xl p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-text-secondary font-medium uppercase tracking-wide">Gesamt</p>
+                    <p class="text-2xl font-bold text-text-primary mt-1">{{ devices|length }}</p>
+                </div>
+                <div class="w-12 h-12 bg-primary-light rounded-xl flex items-center justify-center">
+                    <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Title -->
+    <div class="flex items-center justify-between mb-5">
+        <h2 class="text-sm font-semibold text-text-secondary uppercase tracking-wider">Geräte</h2>
+        <span class="text-xs text-text-tertiary">Aktualisiert alle 10s</span>
+    </div>
+
     <!-- Device Cards -->
     <div class="space-y-4">
         {% for device in devices %}
-        <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+        <div class="bg-white rounded-3xl shadow-card border border-surface-tertiary/30 overflow-hidden
+                    transition-smooth hover:shadow-card-hover"
+             :class="{ 'ring-2 ring-success ring-offset-2': success['{{ device.device_id }}'] }">
+
             <!-- Device Header -->
-            <div class="flex items-start justify-between mb-4">
-                <div class="flex items-center space-x-3">
-                    <!-- Status Indicator -->
-                    <div class="relative">
-                        <div class="w-3 h-3 rounded-full
-                                    {% if device.online %}bg-success pulse-dot{% else %}bg-gray-300{% endif %}">
+            <div class="p-5 pb-4">
+                <div class="flex items-start justify-between">
+                    <div class="flex items-center space-x-4">
+                        <!-- Device Icon with Status -->
+                        <div class="relative">
+                            <div class="w-14 h-14 rounded-2xl flex items-center justify-center
+                                        {% if device.online %}
+                                        bg-gradient-to-br from-success/20 to-success/5 border border-success/20
+                                        {% else %}
+                                        bg-surface-secondary border border-surface-tertiary
+                                        {% endif %}">
+                                <svg class="w-7 h-7 {% if device.online %}text-success{% else %}text-text-tertiary{% endif %}"
+                                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                </svg>
+                            </div>
+                            <!-- Status Dot -->
+                            <div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white
+                                        flex items-center justify-center
+                                        {% if device.online %}bg-success glow-online{% else %}bg-surface-tertiary{% endif %}">
+                                {% if device.online %}
+                                <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                {% else %}
+                                <svg class="w-3 h-3 text-text-tertiary" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                </svg>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="font-semibold text-text-primary text-lg">{{ device.name or device.device_id }}</h3>
+                            <p class="text-xs text-text-tertiary font-mono mt-0.5">{{ device.device_id[:12] }}...</p>
                         </div>
                     </div>
 
-                    <div>
-                        <h3 class="font-semibold text-gray-900">{{ device.name or device.device_id }}</h3>
-                        <p class="text-xs text-gray-400 font-mono">{{ device.device_id }}</p>
-                    </div>
+                    <!-- Details Link -->
+                    <a href="/device/{{ device.device_id }}"
+                       class="text-sm font-medium text-primary hover:text-primary-hover transition-smooth
+                              px-3 py-1.5 rounded-lg hover:bg-primary/5">
+                        Details
+                    </a>
                 </div>
-
-                <!-- Settings Link -->
-                <a href="/device/{{ device.device_id }}"
-                   class="text-sm text-primary hover:text-primary-hover transition-smooth">
-                    Details
-                </a>
             </div>
 
             <!-- Status Info -->
-            <div class="bg-gray-50 rounded-xl p-3 mb-4">
-                <div class="flex justify-between text-sm">
-                    <span class="text-gray-500">Modus</span>
-                    <span class="font-medium
-                                {% if device.last_status.current_mode == 'always_open' %}text-success
-                                {% elif device.last_status.current_mode == 'access_blocked' %}text-danger
-                                {% else %}text-gray-900{% endif %}">
-                        {% if device.online %}
-                            {{ device.last_status.current_mode | default('Normal') }}
-                        {% else %}
-                            Offline
-                        {% endif %}
-                    </span>
-                </div>
-                <div class="flex justify-between text-sm mt-1">
-                    <span class="text-gray-500">Tür</span>
-                    <span class="font-medium">
-                        {% if device.online %}
-                            {% if device.last_status.gpio_state %}Offen{% else %}Geschlossen{% endif %}
-                        {% else %}
-                            -
-                        {% endif %}
-                    </span>
+            <div class="px-5 pb-4">
+                <div class="bg-surface-secondary/50 rounded-2xl p-4 space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-text-secondary">Status</span>
+                        <span class="status-badge {% if device.online %}bg-success-light text-success{% else %}bg-surface-tertiary text-text-tertiary{% endif %}">
+                            <span class="w-1.5 h-1.5 rounded-full {% if device.online %}bg-success{% else %}bg-text-tertiary{% endif %}"></span>
+                            {% if device.online %}Verbunden{% else %}Offline{% endif %}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-text-secondary">Modus</span>
+                        <span class="font-medium text-sm
+                                    {% if device.last_status.current_mode == 'always_open' %}text-success
+                                    {% elif device.last_status.current_mode == 'access_blocked' %}text-danger
+                                    {% else %}text-text-primary{% endif %}">
+                            {% if device.online %}
+                                {% if device.last_status.current_mode == 'always_open' %}
+                                    Immer offen
+                                {% elif device.last_status.current_mode == 'access_blocked' %}
+                                    Blockiert
+                                {% else %}
+                                    Normal
+                                {% endif %}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-text-secondary">Tür</span>
+                        <span class="font-medium text-sm
+                                    {% if device.last_status.gpio_state %}text-warning{% else %}text-text-primary{% endif %}">
+                            {% if device.online %}
+                                {% if device.last_status.gpio_state %}
+                                    <span class="flex items-center">
+                                        <span class="w-2 h-2 bg-warning rounded-full mr-2 animate-pulse"></span>
+                                        Offen
+                                    </span>
+                                {% else %}
+                                    Geschlossen
+                                {% endif %}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </span>
+                    </div>
                 </div>
             </div>
 
             <!-- Action Button -->
-            {% if device.online %}
-            <button @click="openDoor('{{ device.device_id }}')"
-                    :disabled="loading['{{ device.device_id }}']"
-                    class="w-full py-3 bg-primary text-white font-medium rounded-xl
-                           hover:bg-primary-hover active:scale-[0.98]
-                           disabled:opacity-50 disabled:cursor-not-allowed
-                           transition-smooth flex items-center justify-center space-x-2">
-                <template x-if="loading['{{ device.device_id }}']">
-                    <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            <div class="px-5 pb-5">
+                {% if device.online %}
+                <button @click="openDoor('{{ device.device_id }}')"
+                        :disabled="loading['{{ device.device_id }}']"
+                        class="w-full py-4 btn-gradient text-white font-semibold rounded-2xl
+                               shadow-button hover:shadow-glow
+                               disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-button
+                               transition-smooth flex items-center justify-center space-x-2
+                               active:scale-[0.98]">
+                    <template x-if="loading['{{ device.device_id }}']">
+                        <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                    </template>
+                    <template x-if="success['{{ device.device_id }}']">
+                        <span class="flex items-center space-x-2">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span>Erfolgreich!</span>
+                        </span>
+                    </template>
+                    <template x-if="!loading['{{ device.device_id }}'] && !success['{{ device.device_id }}']">
+                        <span class="flex items-center space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+                            </svg>
+                            <span>Tür öffnen</span>
+                        </span>
+                    </template>
+                </button>
+                {% else %}
+                <button disabled
+                        class="w-full py-4 bg-surface-tertiary text-text-tertiary font-medium rounded-2xl
+                               cursor-not-allowed flex items-center justify-center space-x-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M18.364 5.636a9 9 0 010 12.728m-2.829-2.829a5 5 0 000-7.07m-4.243 4.243a1 1 0 01-1.414 0"/>
                     </svg>
-                </template>
-                <template x-if="success['{{ device.device_id }}']">
-                    <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                    </svg>
-                </template>
-                <template x-if="!loading['{{ device.device_id }}'] && !success['{{ device.device_id }}']">
-                    <span>Tür öffnen</span>
-                </template>
-            </button>
-            {% else %}
-            <button disabled
-                    class="w-full py-3 bg-gray-200 text-gray-500 font-medium rounded-xl cursor-not-allowed">
-                Offline
-            </button>
-            {% endif %}
+                    <span>Gerät offline</span>
+                </button>
+                {% endif %}
+            </div>
         </div>
         {% endfor %}
     </div>
 
     {% else %}
     <!-- Empty State -->
-    <div class="text-center py-16">
-        <div class="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+    <div class="text-center py-20">
+        <div class="w-24 h-24 bg-gradient-to-br from-primary/10 to-primary/5 rounded-3xl
+                    flex items-center justify-center mx-auto mb-6 border border-primary/10">
+            <svg class="w-12 h-12 text-primary/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                       d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
             </svg>
         </div>
-        <h3 class="font-medium text-gray-900 mb-1">Keine Geräte</h3>
-        <p class="text-sm text-gray-500">Es sind keine Geräte in diesem Shop registriert.</p>
+        <h3 class="text-xl font-semibold text-text-primary mb-2">Keine Geräte</h3>
+        <p class="text-text-secondary max-w-sm mx-auto">
+            In diesem Shop sind noch keine Geräte registriert.
+        </p>
     </div>
     {% endif %}
 
     {% if user.role == 'admin' %}
     <!-- Admin: Add Device Button -->
     <button @click="showAddDevice = true"
-            class="fixed bottom-6 right-6 w-14 h-14 bg-primary text-white rounded-2xl shadow-lg
-                   flex items-center justify-center hover:bg-primary-hover transition-smooth btn-press">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            class="fixed bottom-8 right-8 w-16 h-16 btn-gradient text-white rounded-2xl shadow-button
+                   flex items-center justify-center hover:shadow-glow transition-smooth btn-press
+                   hover:-translate-y-1">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
     </button>
@@ -151,18 +263,26 @@
          class="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
          @keydown.escape.window="showAddDevice = false">
         <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/50" @click="showAddDevice = false"></div>
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showAddDevice = false"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"></div>
 
         <!-- Modal Content -->
-        <div class="relative bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-6 shadow-xl"
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0 translate-y-4"
-             x-transition:enter-end="opacity-100 translate-y-0">
+        <div class="relative bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 translate-y-8 sm:translate-y-4 sm:scale-95"
+             x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100">
+
+            <!-- Handle for mobile -->
+            <div class="sm:hidden w-12 h-1.5 bg-surface-tertiary rounded-full mx-auto mb-6"></div>
 
             <div class="flex items-center justify-between mb-6">
-                <h3 class="text-lg font-semibold text-gray-900">Neues Gerät hinzufügen</h3>
-                <button @click="showAddDevice = false" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <h3 class="text-xl font-semibold text-text-primary">Neues Gerät</h3>
+                <button @click="showAddDevice = false"
+                        class="w-10 h-10 rounded-xl bg-surface-secondary flex items-center justify-center
+                               hover:bg-surface-tertiary transition-smooth">
+                    <svg class="w-5 h-5 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
                 </button>
@@ -171,20 +291,23 @@
             <form action="/admin/device/create" method="POST">
                 <input type="hidden" name="shop_id" value="{{ shop_id }}">
 
-                <div class="mb-4">
-                    <label for="device_name" class="block text-sm font-medium text-gray-700 mb-1">Gerätename</label>
+                <div class="mb-6">
+                    <label for="device_name" class="block text-sm font-medium text-text-secondary mb-2">Gerätename</label>
                     <input type="text" id="device_name" name="device_name" required
                            placeholder="z.B. Haupteingang"
-                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                           class="w-full px-4 py-4 bg-surface-secondary border-0 rounded-2xl
+                                  focus:ring-2 focus:ring-primary/50 focus:bg-white
+                                  transition-smooth text-text-primary placeholder-text-tertiary">
                 </div>
 
                 <button type="submit"
-                        class="w-full py-3 bg-primary text-white font-medium rounded-xl hover:bg-primary-hover transition-smooth">
-                    Registration Token erstellen
+                        class="w-full py-4 btn-gradient text-white font-semibold rounded-2xl
+                               shadow-button hover:shadow-glow transition-smooth">
+                    Token erstellen
                 </button>
             </form>
 
-            <p class="text-xs text-gray-500 mt-4 text-center">
+            <p class="text-xs text-text-tertiary mt-4 text-center">
                 Der Token ist 24 Stunden gültig und wird auf dem Raspberry Pi eingegeben.
             </p>
         </div>

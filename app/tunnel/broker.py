@@ -280,7 +280,7 @@ class TunnelBroker:
             True if authenticated
         """
         # Load from database
-        from .database import get_device_by_id
+        from ..models.database import get_device_by_id
         device = await get_device_by_id(device_id)
 
         if not device:
@@ -295,12 +295,12 @@ class TunnelBroker:
 
     async def _get_device_info(self, device_id: str) -> Dict[str, Any]:
         """Get device info from database."""
-        from .database import get_device_by_id
+        from ..models.database import get_device_by_id
         return await get_device_by_id(device_id) or {}
 
     async def _update_device_status(self, device_id: str, status: str):
         """Update device status in database."""
-        from .database import update_device_status
+        from ..models.database import update_device_status
         await update_device_status(device_id, status)
 
     async def send_command(
@@ -439,3 +439,101 @@ class TunnelBroker:
             'pending_commands': len(self._pending_commands),
             'device_ids': list(self._connections.keys())
         }
+
+    def register_demo_device(self, device_id: str, shop_id: str, name: str):
+        """
+        Register a simulated demo device (for testing without real hardware).
+
+        Args:
+            device_id: Demo device identifier
+            shop_id: Shop ID the device belongs to
+            name: Device name
+        """
+        if device_id in self._connections:
+            return  # Already registered
+
+        # Create a virtual connection (no real websocket)
+        conn = DeviceConnection(
+            device_id=device_id,
+            websocket=None,  # No real connection
+            session_id=f"demo_{device_id}",
+            shop_id=shop_id,
+            authenticated=True,
+            last_status={
+                "current_mode": "normal",
+                "gpio_state": False,
+                "temperature": 22.5,
+                "uptime": 86400,
+                "is_demo": True
+            }
+        )
+        self._connections[device_id] = conn
+        logger.info(f"Registered demo device: {device_id}")
+
+    def is_demo_device(self, device_id: str) -> bool:
+        """Check if device is a demo device (virtual connection)."""
+        if device_id not in self._connections:
+            return False
+        conn = self._connections[device_id]
+        return conn.websocket is None
+
+    async def simulate_demo_command(self, device_id: str, action: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Simulate a command execution for demo devices.
+
+        Args:
+            device_id: Demo device identifier
+            action: Command action name
+            params: Command parameters
+
+        Returns:
+            Simulated response
+        """
+        if device_id not in self._connections:
+            return {"success": False, "error": "Device not connected"}
+
+        conn = self._connections[device_id]
+
+        if conn.websocket is not None:
+            return {"success": False, "error": "Not a demo device"}
+
+        # Simulate different commands
+        await asyncio.sleep(0.5)  # Simulate network latency
+
+        if action == "open_door":
+            # Simulate door opening
+            conn.last_status["gpio_state"] = True
+            logger.info(f"Demo: Door opened on {device_id}")
+
+            # Auto-close after 3 seconds
+            async def auto_close():
+                await asyncio.sleep(3)
+                if device_id in self._connections:
+                    self._connections[device_id].last_status["gpio_state"] = False
+                    logger.info(f"Demo: Door auto-closed on {device_id}")
+
+            asyncio.create_task(auto_close())
+
+            return {
+                "success": True,
+                "data": {"message": "Demo: Tür wird geöffnet (simuliert)"},
+                "executed_at": datetime.utcnow().isoformat()
+            }
+
+        elif action == "set_mode":
+            mode = params.get("mode", "normal") if params else "normal"
+            conn.last_status["current_mode"] = mode
+            return {
+                "success": True,
+                "data": {"mode": mode},
+                "executed_at": datetime.utcnow().isoformat()
+            }
+
+        elif action == "get_status":
+            return {
+                "success": True,
+                "data": conn.last_status,
+                "executed_at": datetime.utcnow().isoformat()
+            }
+
+        return {"success": True, "data": {"action": action}}

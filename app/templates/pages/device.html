@@ -176,6 +176,69 @@
         </div>
     </div>
 
+    <!-- Admin Actions -->
+    {% if user.role == 'admin' %}
+    <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-6 mb-4">Admin-Aktionen</h2>
+
+    <div class="space-y-3">
+        <!-- Test Connection Button -->
+        <button @click="testConnection()"
+                :disabled="testLoading"
+                class="w-full bg-white rounded-xl p-4 shadow-sm border border-gray-100
+                       hover:shadow-md hover:border-blue-200 transition-smooth btn-press
+                       disabled:opacity-50 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                </div>
+                <div class="text-left">
+                    <p class="font-medium text-gray-900">Verbindung testen</p>
+                    <p class="text-xs text-gray-500">Diagnosetests ausführen</p>
+                </div>
+            </div>
+            <template x-if="testLoading">
+                <svg class="animate-spin h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+            </template>
+            <template x-if="!testLoading && testResult !== null">
+                <svg x-show="testResult" class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+            </template>
+        </button>
+
+        <!-- Delete Device Button -->
+        <button @click="confirmDelete()"
+                class="w-full bg-white rounded-xl p-4 shadow-sm border border-red-200
+                       hover:shadow-md hover:bg-red-50 transition-smooth btn-press
+                       flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </div>
+                <div class="text-left">
+                    <p class="font-medium text-red-700">Gerät löschen</p>
+                    <p class="text-xs text-red-500">Dauerhaft entfernen</p>
+                </div>
+            </div>
+        </button>
+    </div>
+
+    <!-- Test Result Display -->
+    <div x-show="testResultData" x-cloak class="mt-4 bg-gray-50 rounded-xl p-4 border border-gray-200">
+        <h4 class="font-medium text-gray-900 mb-3">Testergebnis</h4>
+        <div id="deviceTestResults" class="space-y-2 text-sm"></div>
+    </div>
+    {% endif %}
+
 </div>
 
 <script>
@@ -184,6 +247,9 @@ function deviceControl() {
         online: {{ 'true' if device.online else 'false' }},
         loading: false,
         success: false,
+        testLoading: false,
+        testResult: null,
+        testResultData: null,
         status: {
             mode: '{{ device.last_status.current_mode | default("Normal") }}',
             gpio: {{ 'true' if device.last_status.gpio_state else 'false' }},
@@ -254,6 +320,74 @@ function deviceControl() {
                 }
             } catch (e) {
                 console.error('Status refresh failed:', e);
+            }
+        },
+
+        async testConnection() {
+            this.testLoading = true;
+            this.testResult = null;
+            this.testResultData = null;
+
+            const resultsDiv = document.getElementById('deviceTestResults');
+            if (resultsDiv) {
+                while (resultsDiv.firstChild) {
+                    resultsDiv.removeChild(resultsDiv.firstChild);
+                }
+            }
+
+            try {
+                const response = await fetch('/api/devices/{{ device.device_id }}/test', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+                this.testResult = data.all_tests_passed;
+                this.testResultData = data;
+
+                // Display results using DOM methods
+                if (resultsDiv && data.tests) {
+                    for (const [testName, result] of Object.entries(data.tests)) {
+                        const row = document.createElement('div');
+                        row.className = 'flex items-center justify-between p-2 rounded ' +
+                            (result.success ? 'bg-green-50' : 'bg-red-50');
+
+                        const label = document.createElement('span');
+                        label.className = result.success ? 'text-green-800' : 'text-red-800';
+                        label.textContent = testName.replace(/_/g, ' ');
+
+                        const status = document.createElement('span');
+                        status.className = 'font-medium ' + (result.success ? 'text-green-600' : 'text-red-600');
+                        status.textContent = result.success ? 'OK' : 'FEHLER';
+
+                        row.appendChild(label);
+                        row.appendChild(status);
+                        resultsDiv.appendChild(row);
+                    }
+
+                    if (data.tests.ping && data.tests.ping.latency_ms) {
+                        const latencyRow = document.createElement('div');
+                        latencyRow.className = 'text-xs text-gray-500 mt-2';
+                        latencyRow.textContent = 'Latenz: ' + data.tests.ping.latency_ms + 'ms';
+                        resultsDiv.appendChild(latencyRow);
+                    }
+                }
+            } catch (e) {
+                this.testResult = false;
+                alert('Testfehler: ' + e.message);
+            } finally {
+                this.testLoading = false;
+            }
+        },
+
+        confirmDelete() {
+            const deviceName = '{{ device.name | default(device.device_id) }}';
+            if (confirm('Gerät "' + deviceName + '" wirklich löschen?\n\nDies kann nicht rückgängig gemacht werden.')) {
+                // Create form and submit
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/admin/device/{{ device.device_id }}/delete';
+                document.body.appendChild(form);
+                form.submit();
             }
         },
 

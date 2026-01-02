@@ -115,7 +115,7 @@ async def init_database():
 
 async def create_default_admin():
     """Create default admin user if no users exist."""
-    from passlib.hash import bcrypt
+    import bcrypt
 
     async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute("SELECT COUNT(*) FROM users") as cursor:
@@ -123,7 +123,7 @@ async def create_default_admin():
 
         if count == 0:
             # Create default admin
-            password_hash = bcrypt.hash("admin")
+            password_hash = bcrypt.hashpw(b"admin", bcrypt.gensalt()).decode('utf-8')
             await db.execute(
                 """INSERT INTO users (username, password_hash, role, email)
                    VALUES (?, ?, ?, ?)""",
@@ -216,6 +216,53 @@ async def create_shop(shop_id: str, name: str):
             (shop_id, name)
         )
         await db.commit()
+
+
+async def delete_shop(shop_id: str) -> dict:
+    """
+    Delete a shop and all related data (cascade).
+
+    Returns dict with counts of deleted items for audit purposes.
+    """
+    result = {
+        "shop_id": shop_id,
+        "devices_deleted": 0,
+        "tokens_deleted": 0,
+        "user_access_deleted": 0
+    }
+
+    async with aiosqlite.connect(DB_PATH) as db:
+        # Count and delete devices
+        async with db.execute(
+            "SELECT COUNT(*) FROM devices WHERE shop_id = ?", (shop_id,)
+        ) as cursor:
+            result["devices_deleted"] = (await cursor.fetchone())[0]
+
+        await db.execute("DELETE FROM devices WHERE shop_id = ?", (shop_id,))
+
+        # Count and delete registration tokens
+        async with db.execute(
+            "SELECT COUNT(*) FROM registration_tokens WHERE shop_id = ?", (shop_id,)
+        ) as cursor:
+            result["tokens_deleted"] = (await cursor.fetchone())[0]
+
+        await db.execute("DELETE FROM registration_tokens WHERE shop_id = ?", (shop_id,))
+
+        # Count and delete user access
+        async with db.execute(
+            "SELECT COUNT(*) FROM user_shops WHERE shop_id = ?", (shop_id,)
+        ) as cursor:
+            result["user_access_deleted"] = (await cursor.fetchone())[0]
+
+        await db.execute("DELETE FROM user_shops WHERE shop_id = ?", (shop_id,))
+
+        # Delete the shop itself
+        await db.execute("DELETE FROM shops WHERE id = ?", (shop_id,))
+
+        await db.commit()
+
+    logger.info(f"Shop deleted: {shop_id} (devices: {result['devices_deleted']}, tokens: {result['tokens_deleted']})")
+    return result
 
 
 # Device creation
@@ -316,3 +363,72 @@ async def log_audit(
             (user_id, device_id, shop_id, action, details, result, ip_address)
         )
         await db.commit()
+
+
+# Demo Shop Setup
+DEMO_SHOP_ID = "demo_store"
+DEMO_DEVICES = [
+    {
+        "device_id": "demo_haupteingang_001",
+        "name": "Haupteingang",
+        "api_key": "demo_key_haupteingang_001"
+    },
+    {
+        "device_id": "demo_hintereingang_002",
+        "name": "Hintereingang",
+        "api_key": "demo_key_hintereingang_002"
+    }
+]
+
+
+async def create_demo_shop():
+    """Create demo shop with devices for testing."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        # Check if demo shop exists
+        async with db.execute(
+            "SELECT id FROM shops WHERE id = ?", (DEMO_SHOP_ID,)
+        ) as cursor:
+            if await cursor.fetchone():
+                logger.debug("Demo shop already exists")
+                return
+
+        # Create demo shop
+        await db.execute(
+            "INSERT INTO shops (id, name) VALUES (?, ?)",
+            (DEMO_SHOP_ID, "Demo Store Berlin")
+        )
+
+        # Create demo devices
+        for device in DEMO_DEVICES:
+            await db.execute(
+                """INSERT OR REPLACE INTO devices
+                   (device_id, shop_id, name, api_key, status, registered_at)
+                   VALUES (?, ?, ?, ?, 'online', ?)""",
+                (device["device_id"], DEMO_SHOP_ID, device["name"],
+                 device["api_key"], datetime.utcnow().isoformat())
+            )
+
+        # Give admin user access to demo shop
+        async with db.execute(
+            "SELECT id FROM users WHERE role = 'admin' LIMIT 1"
+        ) as cursor:
+            admin = await cursor.fetchone()
+            if admin:
+                await db.execute(
+                    """INSERT OR IGNORE INTO user_shops (user_id, shop_id, permission)
+                       VALUES (?, ?, 'control')""",
+                    (admin[0], DEMO_SHOP_ID)
+                )
+
+        await db.commit()
+        logger.info(f"Created demo shop '{DEMO_SHOP_ID}' with {len(DEMO_DEVICES)} devices")
+
+
+def get_demo_device_ids() -> list[str]:
+    """Get list of demo device IDs."""
+    return [d["device_id"] for d in DEMO_DEVICES]
+
+
+def is_demo_device(device_id: str) -> bool:
+    """Check if device is a demo device."""
+    return device_id in get_demo_device_ids()

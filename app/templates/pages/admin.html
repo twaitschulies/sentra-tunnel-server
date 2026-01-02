@@ -15,11 +15,19 @@
                 </a>
                 <h1 class="text-xl font-semibold text-gray-900">Administration</h1>
             </div>
-            <a href="/auth/logout" class="text-gray-500 hover:text-gray-700">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                </svg>
-            </a>
+            <div class="flex items-center space-x-4">
+                <a href="/diagnostics" class="flex items-center space-x-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>Diagnostics</span>
+                </a>
+                <a href="/auth/logout" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                    </svg>
+                </a>
+            </div>
         </div>
     </header>
 
@@ -123,9 +131,15 @@
                                 <h3 class="text-lg font-semibold text-gray-900">{{ shop.name }}</h3>
                                 <p class="text-sm text-gray-500">ID: {{ shop.id }} | {{ shop.device_count }} Gerät(e)</p>
                             </div>
-                            <a href="/shop/{{ shop.id }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                                Öffnen &rarr;
-                            </a>
+                            <div class="flex items-center space-x-4">
+                                <a href="/shop/{{ shop.id }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                    Öffnen &rarr;
+                                </a>
+                                <button onclick="deleteShop('{{ shop.id }}', '{{ shop.name }}', {{ shop.device_count }})"
+                                        class="text-red-600 hover:text-red-800 text-sm font-medium">
+                                    Löschen
+                                </button>
+                            </div>
                         </div>
 
                         {% if shop.devices %}
@@ -216,6 +230,25 @@ async function deleteDevice(deviceId, deviceName) {
     } catch (e) {
         alert('Verbindungsfehler: ' + e.message);
     }
+}
+
+async function deleteShop(shopId, shopName, deviceCount) {
+    let message = `Shop "${shopName}" wirklich löschen?`;
+    if (deviceCount > 0) {
+        message += `\n\nACHTUNG: ${deviceCount} Gerät(e) werden ebenfalls gelöscht!`;
+    }
+    message += '\n\nDies kann nicht rückgängig gemacht werden.';
+
+    if (!confirm(message)) {
+        return;
+    }
+
+    // Use form submission for shop delete (POST route)
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/admin/shop/${shopId}/delete`;
+    document.body.appendChild(form);
+    form.submit();
 }
 </script>
 {% endblock %}

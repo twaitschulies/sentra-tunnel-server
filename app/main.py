@@ -16,12 +16,37 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .routes import auth, portal, devices, commands
 from .tunnel.broker import TunnelBroker
-from .models.database import init_database
+from .models.database import init_database, create_demo_shop, DEMO_SHOP_ID, DEMO_DEVICES
 
-# Configure logging
+# Configure logging with file handler for troubleshooting
+LOG_DIR = Path(__file__).parent.parent / 'data' / 'logs'
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+# Console handler
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_handler.setFormatter(logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+))
+
+# File handler for detailed logs
+file_handler = logging.FileHandler(LOG_DIR / 'server.log')
+file_handler.setLevel(logging.DEBUG)
+file_handler.setFormatter(logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s'
+))
+
+# Error file handler for errors only
+error_handler = logging.FileHandler(LOG_DIR / 'errors.log')
+error_handler.setLevel(logging.ERROR)
+error_handler.setFormatter(logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d\n%(message)s\n'
+))
+
+# Configure root logger
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.DEBUG,
+    handlers=[console_handler, file_handler, error_handler]
 )
 logger = logging.getLogger(__name__)
 
@@ -50,9 +75,20 @@ async def lifespan(app: FastAPI):
     # Initialize database
     await init_database()
 
+    # Create demo shop and devices
+    await create_demo_shop()
+
     # Initialize tunnel broker
     tunnel_broker = TunnelBroker()
     app.state.tunnel_broker = tunnel_broker
+
+    # Register demo devices as "connected"
+    for device in DEMO_DEVICES:
+        tunnel_broker.register_demo_device(
+            device_id=device["device_id"],
+            shop_id=DEMO_SHOP_ID,
+            name=device["name"]
+        )
 
     logger.info("Server started successfully")
 

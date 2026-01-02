@@ -66,14 +66,23 @@ async def execute_command(
     if not broker.is_device_online(device_id):
         raise HTTPException(status_code=503, detail="Device offline")
 
-    # Execute command
+    # Execute command (check for demo device first)
     try:
-        result = await broker.send_command(
-            device_id=device_id,
-            action=command.action,
-            params=command.params,
-            timeout=30.0
-        )
+        if broker.is_demo_device(device_id):
+            # Use simulated command for demo devices
+            result = await broker.simulate_demo_command(
+                device_id=device_id,
+                action=command.action,
+                params=command.params
+            )
+        else:
+            # Real device - send through websocket
+            result = await broker.send_command(
+                device_id=device_id,
+                action=command.action,
+                params=command.params,
+                timeout=30.0
+            )
 
         # Log command
         await log_audit(
