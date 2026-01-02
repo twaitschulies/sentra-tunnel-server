@@ -135,23 +135,21 @@
             <div class="mt-6" x-show="lightingOptions.timeControlled">
                 <p class="text-sm text-gray-600 mb-3">Beleuchtung aus von <span class="font-semibold text-red-500" x-text="timeSlider.start + ':00'"></span> bis <span class="font-semibold text-red-500" x-text="timeSlider.end + ':00'"></span></p>
 
-                <div class="relative h-2 bg-gray-200 rounded-full"
-                     x-ref="sliderTrack"
-                     @mousedown="startDrag($event)"
-                     @touchstart="startDrag($event)">
+                <div class="relative h-2 bg-gray-200 rounded-full select-none"
+                     x-ref="sliderTrack">
                     <!-- Active range -->
-                    <div class="absolute h-2 bg-red-400 rounded-full transition-all"
+                    <div class="absolute h-2 bg-red-400 rounded-full pointer-events-none"
                          :style="'left: ' + sliderStartPercent + '%; width: ' + sliderWidthPercent + '%'"></div>
                     <!-- Start handle -->
-                    <div class="absolute w-5 h-5 bg-white border-2 border-red-400 rounded-full -mt-1.5 cursor-grab active:cursor-grabbing shadow-md transition-all hover:scale-110"
-                         :style="'left: calc(' + sliderStartPercent + '% - 10px)'"
-                         @mousedown.stop="dragHandle = 'start'"
-                         @touchstart.stop="dragHandle = 'start'"></div>
+                    <div class="absolute w-6 h-6 bg-white border-2 border-red-400 rounded-full -mt-2 cursor-grab active:cursor-grabbing shadow-md hover:scale-110 hover:border-red-500 z-10"
+                         :style="'left: calc(' + sliderStartPercent + '% - 12px)'"
+                         @mousedown.prevent="startDrag($event, 'start')"
+                         @touchstart.prevent="startDrag($event, 'start')"></div>
                     <!-- End handle -->
-                    <div class="absolute w-5 h-5 bg-white border-2 border-red-400 rounded-full -mt-1.5 cursor-grab active:cursor-grabbing shadow-md transition-all hover:scale-110"
-                         :style="'left: calc(' + sliderEndPercent + '% - 10px)'"
-                         @mousedown.stop="dragHandle = 'end'"
-                         @touchstart.stop="dragHandle = 'end'"></div>
+                    <div class="absolute w-6 h-6 bg-white border-2 border-red-400 rounded-full -mt-2 cursor-grab active:cursor-grabbing shadow-md hover:scale-110 hover:border-red-500 z-10"
+                         :style="'left: calc(' + sliderEndPercent + '% - 12px)'"
+                         @mousedown.prevent="startDrag($event, 'end')"
+                         @touchstart.prevent="startDrag($event, 'end')"></div>
                 </div>
                 <!-- Time Labels -->
                 <div class="flex justify-between mt-3 text-xs text-gray-500">
@@ -687,7 +685,6 @@ function shopDashboard() {
             start: 23,
             end: 4
         },
-        dragHandle: null,
 
         // Time slider spans 17-7 (15 hours, wrapping through midnight)
         // We map this to 0-100%
@@ -729,9 +726,7 @@ function shopDashboard() {
             return Object.values(this.serviceChecks).filter(v => v).length;
         },
 
-        startDrag(event) {
-            if (!this.dragHandle) return;
-
+        startDrag(event, handle) {
             const track = this.$refs.sliderTrack;
             const rect = track.getBoundingClientRect();
 
@@ -739,20 +734,20 @@ function shopDashboard() {
                 const percent = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
                 const hour = this.percentToTime(percent);
 
-                if (this.dragHandle === 'start') {
+                if (handle === 'start') {
                     this.timeSlider.start = hour;
-                } else if (this.dragHandle === 'end') {
+                } else if (handle === 'end') {
                     this.timeSlider.end = hour;
                 }
             };
 
             const onMove = (e) => {
+                e.preventDefault();
                 const clientX = e.touches ? e.touches[0].clientX : e.clientX;
                 updatePosition(clientX);
             };
 
             const onEnd = () => {
-                this.dragHandle = null;
                 document.removeEventListener('mousemove', onMove);
                 document.removeEventListener('mouseup', onEnd);
                 document.removeEventListener('touchmove', onMove);
@@ -761,12 +756,8 @@ function shopDashboard() {
 
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onEnd);
-            document.addEventListener('touchmove', onMove);
+            document.addEventListener('touchmove', onMove, { passive: false });
             document.addEventListener('touchend', onEnd);
-
-            // Initial position update
-            const clientX = event.touches ? event.touches[0].clientX : event.clientX;
-            updatePosition(clientX);
         },
 
         async openDoor(deviceId) {
