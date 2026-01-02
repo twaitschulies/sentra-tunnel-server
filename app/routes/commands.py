@@ -51,11 +51,17 @@ async def execute_command(
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
 
-    # Verify access
+    # Verify access and control permission
     if user.get('role') != 'admin':
         user_shops = await get_user_shops(user['id'])
-        if not any(s['id'] == device.get('shop_id') for s in user_shops):
+        shop_access = next(
+            (s for s in user_shops if s['id'] == device.get('shop_id')),
+            None
+        )
+        if not shop_access:
             raise HTTPException(status_code=403, detail="Access denied")
+        if shop_access.get('permission') != 'control':
+            raise HTTPException(status_code=403, detail="No control permission")
 
     # Get broker
     broker = request.app.state.tunnel_broker

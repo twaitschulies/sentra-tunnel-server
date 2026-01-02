@@ -167,11 +167,17 @@ async def device_view(request: Request, device_id: str, user: dict = Depends(req
     if not device:
         return RedirectResponse(url="/dashboard", status_code=302)
 
-    # Verify access
+    # Verify access and get permission
+    can_control = True
     if user.get('role') != 'admin':
         user_shops = await get_user_shops(user['id'])
-        if not any(s['id'] == device.get('shop_id') for s in user_shops):
+        shop_access = next(
+            (s for s in user_shops if s['id'] == device.get('shop_id')),
+            None
+        )
+        if not shop_access:
             return RedirectResponse(url="/dashboard", status_code=302)
+        can_control = shop_access.get('permission') == 'control'
 
     # Get real-time status
     broker = request.app.state.tunnel_broker
@@ -189,7 +195,8 @@ async def device_view(request: Request, device_id: str, user: dict = Depends(req
         {
             "request": request,
             "user": user,
-            "device": device
+            "device": device,
+            "can_control": can_control
         }
     )
 

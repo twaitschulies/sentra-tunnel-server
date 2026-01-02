@@ -63,33 +63,44 @@
     </div>
 
     <!-- Main Action Button -->
-    {% if device.online %}
-    <button @click="openDoor()"
-            :disabled="loading"
-            class="w-full py-4 bg-primary text-white text-lg font-semibold rounded-2xl
-                   hover:bg-primary-hover active:scale-[0.98]
-                   disabled:opacity-50 disabled:cursor-not-allowed
-                   transition-smooth flex items-center justify-center space-x-2 mb-6 min-h-[60px]">
-        <template x-if="loading">
-            <svg class="animate-spin h-6 w-6" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-            </svg>
-        </template>
-        <template x-if="success">
-            <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-            </svg>
-        </template>
-        <template x-if="!loading && !success">
-            <span>TÜR ÖFFNEN</span>
-        </template>
-    </button>
+    {% if can_control %}
+        {% if device.online %}
+        <button @click="openDoor()"
+                :disabled="loading"
+                class="w-full py-4 bg-primary text-white text-lg font-semibold rounded-2xl
+                       hover:bg-primary-hover active:scale-[0.98]
+                       disabled:opacity-50 disabled:cursor-not-allowed
+                       transition-smooth flex items-center justify-center space-x-2 mb-6 min-h-[60px]">
+            <template x-if="loading">
+                <svg class="animate-spin h-6 w-6" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+            </template>
+            <template x-if="success">
+                <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+            </template>
+            <template x-if="!loading && !success">
+                <span>TÜR ÖFFNEN</span>
+            </template>
+        </button>
+        {% else %}
+        <button disabled
+                class="w-full py-4 bg-gray-200 text-gray-500 text-lg font-semibold rounded-2xl cursor-not-allowed mb-6">
+            Gerät offline
+        </button>
+        {% endif %}
     {% else %}
-    <button disabled
-            class="w-full py-4 bg-gray-200 text-gray-500 text-lg font-semibold rounded-2xl cursor-not-allowed mb-6">
-        Gerät offline
-    </button>
+        <!-- View-only notice -->
+        <div class="w-full py-4 bg-amber-50 text-amber-700 text-center rounded-2xl border border-amber-200 mb-6">
+            <svg class="w-5 h-5 inline-block mr-2 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            </svg>
+            Nur Lesezugriff – keine Steuerung möglich
+        </div>
     {% endif %}
 
     <!-- Divider -->
@@ -121,6 +132,7 @@
         </div>
     </div>
 
+    {% if can_control %}
     <!-- Quick Actions -->
     <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-6 mb-4">Schnellaktionen</h2>
 
@@ -157,6 +169,7 @@
             <p class="text-xs text-gray-500">Bearbeiten</p>
         </button>
     </div>
+    {% endif %}
 
     <!-- Device Info -->
     <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-6 mb-4">Geräteinformationen</h2>
