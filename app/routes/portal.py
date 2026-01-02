@@ -198,25 +198,33 @@ async def device_view(request: Request, device_id: str, user: dict = Depends(req
 @router.get("/admin", response_class=HTMLResponse)
 async def admin_page(request: Request, user: dict = Depends(require_auth)):
     """
-    Admin page - manage shops and devices.
+    Admin page - manage shops, devices, and users.
     """
+    from ..models.database import get_all_users, get_user_shop_assignments
+
     if user.get('role') != 'admin':
         return RedirectResponse(url="/dashboard", status_code=302)
 
     shops = await get_all_shops()
 
-    # Enrich with device counts
+    # Enrich shops with device counts
     for shop in shops:
         devices = await get_devices_by_shop(shop['id'])
         shop['device_count'] = len(devices)
         shop['devices'] = devices
+
+    # Get all users with their shop assignments
+    users = await get_all_users()
+    for u in users:
+        u['shops'] = await get_user_shop_assignments(u['id'])
 
     return templates.TemplateResponse(
         "pages/admin.html",
         {
             "request": request,
             "user": user,
-            "shops": shops
+            "shops": shops,
+            "users": users
         }
     )
 
@@ -514,4 +522,194 @@ async def delete_device_route(request: Request, device_id: str, user: dict = Dep
     # Redirect back to shop or admin
     if shop_id:
         return RedirectResponse(url=f"/shop/{shop_id}", status_code=302)
+    return RedirectResponse(url="/admin", status_code=302)
+
+
+# =============================================================================
+# User Management Routes
+# =============================================================================
+
+@router.post("/admin/user/create")
+async def create_user_route(request: Request, user: dict = Depends(require_auth)):
+    """Create a new user."""
+    from ..models.database import create_user, get_user_by_username
+
+    if user.get('role') != 'admin':
+        return RedirectResponse(url="/dashboard", status_code=302)
+
+    form = await request.form()
+    username = form.get('username', '').strip().lower()
+    password = form.get('password', '').strip()
+    role = form.get('role', 'operator')
+    email = form.get('email', '').strip() or None
+
+    if not username or not password:
+        logger.warning("User creation failed: missing username or password")
+        return RedirectResponse(url="/admin", status_code=302)
+
+    # Check if username already exists
+    existing = await get_user_by_username(username)
+    if existing:
+        logger.warning(f"User creation failed: username '{username}' already exists")
+        return RedirectResponse(url="/admin", status_code=302)
+
+    try:
+        new_user_id = await create_user(username, password, role, email)
+
+        await log_audit(
+            action="user_created",
+            user_id=user['id'],
+            details=f"Created user '{username}' with role '{role}'",
+            ip_address=request.client.host
+        )
+
+        logger.info(f"User created by {user['username']}: {username} (role: {role})")
+    except Exception as e:
+        logger.error(f"Failed to create user: {e}")
+
+    return RedirectResponse(url="/admin", status_code=302)
+
+
+@router.post("/admin/user/{user_id}/delete")
+async def delete_user_route(request: Request, user_id: int, user: dict = Depends(require_auth)):
+    """Delete a user."""
+    from ..models.database import delete_user, get_user_by_id
+
+    if user.get('role') != 'admin':
+        return RedirectResponse(url="/dashboard", status_code=302)
+
+    # Prevent self-deletion
+    if user['id'] == user_id:
+        logger.warning(f"User {user['username']} tried to delete themselves")
+        return RedirectResponse(url="/admin", status_code=302)
+
+    target_user = await get_user_by_id(user_id)
+    if not target_user:
+        return RedirectResponse(url="/admin", status_code=302)
+
+    try:
+        await delete_user(user_id)
+
+        await log_audit(
+            action="user_deleted",
+            user_id=user['id'],
+            details=f"Deleted user '{target_user['username']}'",
+            ip_address=request.client.host
+        )
+
+        logger.info(f"User deleted by {user['username']}: {target_user['username']}")
+    except Exception as e:
+        logger.error(f"Failed to delete user: {e}")
+
+    return RedirectResponse(url="/admin", status_code=302)
+
+
+@router.post("/admin/user/{user_id}/update")
+async def update_user_route(request: Request, user_id: int, user: dict = Depends(require_auth)):
+    """Update a user."""
+    from ..models.database import update_user, get_user_by_id
+
+    if user.get('role') != 'admin':
+        return RedirectResponse(url="/dashboard", status_code=302)
+
+    target_user = await get_user_by_id(user_id)
+    if not target_user:
+        return RedirectResponse(url="/admin", status_code=302)
+
+    form = await request.form()
+    password = form.get('password', '').strip() or None
+    role = form.get('role', '').strip() or None
+    email = form.get('email', '').strip()
+
+    # Only update email if provided (allow empty to clear)
+    email_update = email if 'email' in form.keys() else None
+
+    try:
+        await update_user(user_id, password=password, role=role, email=email_update)
+
+        changes = []
+        if password:
+            changes.append("password")
+        if role:
+            changes.append(f"role={role}")
+        if email_update is not None:
+            changes.append(f"email={email_update or 'cleared'}")
+
+        await log_audit(
+            action="user_updated",
+            user_id=user['id'],
+            details=f"Updated user '{target_user['username']}': {', '.join(changes)}",
+            ip_address=request.client.host
+        )
+
+        logger.info(f"User updated by {user['username']}: {target_user['username']}")
+    except Exception as e:
+        logger.error(f"Failed to update user: {e}")
+
+    return RedirectResponse(url="/admin", status_code=302)
+
+
+@router.post("/admin/user/{user_id}/assign-shop")
+async def assign_shop_route(request: Request, user_id: int, user: dict = Depends(require_auth)):
+    """Assign a user to a shop."""
+    from ..models.database import assign_user_to_shop, get_user_by_id, get_shop_by_id
+
+    if user.get('role') != 'admin':
+        return RedirectResponse(url="/dashboard", status_code=302)
+
+    form = await request.form()
+    shop_id = form.get('shop_id', '').strip()
+    permission = form.get('permission', 'control')
+
+    target_user = await get_user_by_id(user_id)
+    shop = await get_shop_by_id(shop_id)
+
+    if not target_user or not shop:
+        return RedirectResponse(url="/admin", status_code=302)
+
+    try:
+        await assign_user_to_shop(user_id, shop_id, permission)
+
+        await log_audit(
+            action="user_shop_assigned",
+            user_id=user['id'],
+            shop_id=shop_id,
+            details=f"Assigned user '{target_user['username']}' to shop '{shop['name']}' ({permission})",
+            ip_address=request.client.host
+        )
+
+        logger.info(f"User {target_user['username']} assigned to shop {shop_id} by {user['username']}")
+    except Exception as e:
+        logger.error(f"Failed to assign user to shop: {e}")
+
+    return RedirectResponse(url="/admin", status_code=302)
+
+
+@router.post("/admin/user/{user_id}/remove-shop/{shop_id}")
+async def remove_shop_route(request: Request, user_id: int, shop_id: str, user: dict = Depends(require_auth)):
+    """Remove a user from a shop."""
+    from ..models.database import remove_user_from_shop, get_user_by_id
+
+    if user.get('role') != 'admin':
+        return RedirectResponse(url="/dashboard", status_code=302)
+
+    target_user = await get_user_by_id(user_id)
+    if not target_user:
+        return RedirectResponse(url="/admin", status_code=302)
+
+    try:
+        await remove_user_from_shop(user_id, shop_id)
+
+        await log_audit(
+            action="user_shop_removed",
+            user_id=user['id'],
+            shop_id=shop_id,
+            details=f"Removed user '{target_user['username']}' from shop '{shop_id}'",
+            ip_address=request.client.host
+        )
+
+        logger.info(f"User {target_user['username']} removed from shop {shop_id} by {user['username']}")
+    except Exception as e:
+        logger.error(f"Failed to remove user from shop: {e}")
+
     return RedirectResponse(url="/admin", status_code=302)

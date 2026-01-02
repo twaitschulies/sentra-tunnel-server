@@ -1,29 +1,32 @@
 {% extends "base.html" %}
 
-{% block title %}Admin - Sentra Tunnel{% endblock %}
+{% block title %}Administration - Sentra Guard{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen bg-surface-secondary bg-gradient-mesh">
     <!-- Header -->
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <a href="/dashboard" class="text-gray-500 hover:text-gray-700">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <header class="glass-card sticky top-0 z-10 border-b border-white/20">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <a href="/dashboard" class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-tertiary/50 transition-smooth">
+                    <svg class="w-6 h-6 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
                 </a>
-                <h1 class="text-xl font-semibold text-gray-900">Administration</h1>
+                <div>
+                    <h1 class="text-xl font-semibold text-text-primary">Administration</h1>
+                    <p class="text-xs text-text-secondary">Shops, Geräte & Benutzer verwalten</p>
+                </div>
             </div>
-            <div class="flex items-center space-x-4">
-                <a href="/diagnostics" class="flex items-center space-x-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors">
+            <div class="flex items-center space-x-3">
+                <a href="/diagnostics" class="flex items-center space-x-2 px-4 py-2 bg-surface-tertiary/50 hover:bg-surface-tertiary rounded-xl text-sm font-medium text-text-secondary transition-smooth">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                     </svg>
-                    <span>Diagnostics</span>
+                    <span>Diagnostik</span>
                 </a>
-                <a href="/auth/logout" class="text-gray-500 hover:text-gray-700">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <a href="/auth/logout" class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface-tertiary/50 transition-smooth">
+                    <svg class="w-5 h-5 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                     </svg>
                 </a>
@@ -31,184 +34,399 @@
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 py-6 space-y-8">
+    <main class="max-w-7xl mx-auto px-6 py-8 space-y-8" x-data="adminPanel()">
 
         <!-- New Token Display -->
         {% if new_token %}
-        <div class="bg-green-50 border border-green-200 rounded-xl p-6">
-            <div class="flex items-start space-x-3">
-                <div class="flex-shrink-0">
-                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="bg-success-light border border-success/30 rounded-2xl p-6">
+            <div class="flex items-start space-x-4">
+                <div class="w-12 h-12 bg-success/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
                 <div class="flex-1">
-                    <h3 class="text-lg font-semibold text-green-800">Registration Token erstellt</h3>
-                    <p class="text-green-700 mt-1">Gerät: <strong>{{ new_device_name }}</strong> in <strong>{{ new_shop_name }}</strong></p>
-                    <div class="mt-4 bg-white rounded-lg p-4 border border-green-300">
-                        <p class="text-sm text-gray-600 mb-2">Token (gültig 24 Stunden):</p>
-                        <code class="block text-lg font-mono text-gray-900 break-all select-all">{{ new_token }}</code>
+                    <h3 class="text-lg font-semibold text-success">Registration Token erstellt</h3>
+                    <p class="text-success/80 mt-1">Gerät: <strong>{{ new_device_name }}</strong> in <strong>{{ new_shop_name }}</strong></p>
+                    <div class="mt-4 bg-white rounded-xl p-4 border border-success/20">
+                        <p class="text-sm text-text-secondary mb-2">Token (gültig 24 Stunden):</p>
+                        <code class="block text-lg font-mono text-text-primary break-all select-all">{{ new_token }}</code>
                     </div>
-                    <p class="text-sm text-green-600 mt-3">Diesen Token auf dem Raspberry Pi eingeben.</p>
+                    <p class="text-sm text-success/70 mt-3">Diesen Token auf dem Raspberry Pi eingeben.</p>
                 </div>
             </div>
         </div>
         {% endif %}
 
-        <!-- Create Shop Section -->
-        <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h2 class="text-lg font-semibold text-gray-900">Neuen Shop erstellen</h2>
-            </div>
-            <form action="/admin/shop/create" method="POST" class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="shop_id" class="block text-sm font-medium text-gray-700 mb-1">Shop ID</label>
-                        <input type="text" id="shop_id" name="shop_id" required
-                               placeholder="z.B. shop_muenchen"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        <p class="text-xs text-gray-500 mt-1">Kleinbuchstaben, keine Leerzeichen</p>
-                    </div>
-                    <div>
-                        <label for="shop_name" class="block text-sm font-medium text-gray-700 mb-1">Shop Name</label>
-                        <input type="text" id="shop_name" name="shop_name" required
-                               placeholder="z.B. Filiale München"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                </div>
-                <div class="mt-4">
-                    <button type="submit" class="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors">
-                        Shop erstellen
-                    </button>
-                </div>
-            </form>
-        </section>
+        <!-- Tab Navigation -->
+        <div class="flex space-x-2 bg-surface-tertiary/50 p-1.5 rounded-2xl w-fit">
+            <button @click="activeTab = 'shops'"
+                    :class="activeTab === 'shops' ? 'bg-white shadow-card text-text-primary' : 'text-text-secondary hover:text-text-primary'"
+                    class="px-6 py-2.5 rounded-xl font-medium transition-smooth">
+                Shops & Geräte
+            </button>
+            <button @click="activeTab = 'users'"
+                    :class="activeTab === 'users' ? 'bg-white shadow-card text-text-primary' : 'text-text-secondary hover:text-text-primary'"
+                    class="px-6 py-2.5 rounded-xl font-medium transition-smooth">
+                Benutzer
+            </button>
+        </div>
 
-        <!-- Create Device Section -->
-        {% if shops %}
-        <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h2 class="text-lg font-semibold text-gray-900">Neues Gerät hinzufügen</h2>
-            </div>
-            <form action="/admin/device/create" method="POST" class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="device_shop_id" class="block text-sm font-medium text-gray-700 mb-1">Shop</label>
-                        <select id="device_shop_id" name="shop_id" required
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            {% for shop in shops %}
-                            <option value="{{ shop.id }}">{{ shop.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div>
-                        <label for="device_name" class="block text-sm font-medium text-gray-700 mb-1">Gerätename</label>
-                        <input type="text" id="device_name" name="device_name" required
-                               placeholder="z.B. Haupteingang"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    </div>
+        <!-- SHOPS TAB -->
+        <div x-show="activeTab === 'shops'" x-cloak>
+            <!-- Create Shop Section -->
+            <section class="bg-white rounded-2xl shadow-card border border-surface-tertiary/30 overflow-hidden mb-8">
+                <div class="px-6 py-4 border-b border-surface-tertiary/50 bg-surface-secondary/30">
+                    <h2 class="text-lg font-semibold text-text-primary">Neuen Shop erstellen</h2>
                 </div>
-                <div class="mt-4">
-                    <button type="submit" class="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors">
-                        Registration Token erstellen
-                    </button>
-                </div>
-            </form>
-        </section>
-        {% endif %}
-
-        <!-- Existing Shops -->
-        <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h2 class="text-lg font-semibold text-gray-900">Shops & Geräte</h2>
-            </div>
-            <div class="divide-y divide-gray-200">
-                {% if shops %}
-                    {% for shop in shops %}
-                    <div class="p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <div>
-                                <h3 class="text-lg font-semibold text-gray-900">{{ shop.name }}</h3>
-                                <p class="text-sm text-gray-500">ID: {{ shop.id }} | {{ shop.device_count }} Gerät(e)</p>
-                            </div>
-                            <div class="flex items-center space-x-4">
-                                <a href="/shop/{{ shop.id }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                                    Öffnen &rarr;
-                                </a>
-                                <button onclick="deleteShop('{{ shop.id }}', '{{ shop.name }}', {{ shop.device_count }})"
-                                        class="text-red-600 hover:text-red-800 text-sm font-medium">
-                                    Löschen
-                                </button>
-                            </div>
+                <form action="/admin/shop/create" method="POST" class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="shop_id" class="block text-sm font-medium text-text-secondary mb-2">Shop ID</label>
+                            <input type="text" id="shop_id" name="shop_id" required
+                                   placeholder="z.B. shop_muenchen"
+                                   class="w-full px-4 py-3 bg-surface-secondary border-0 rounded-xl focus:ring-2 focus:ring-primary/50 transition-smooth">
+                            <p class="text-xs text-text-tertiary mt-1">Kleinbuchstaben, keine Leerzeichen</p>
                         </div>
+                        <div>
+                            <label for="shop_name" class="block text-sm font-medium text-text-secondary mb-2">Shop Name</label>
+                            <input type="text" id="shop_name" name="shop_name" required
+                                   placeholder="z.B. Filiale München"
+                                   class="w-full px-4 py-3 bg-surface-secondary border-0 rounded-xl focus:ring-2 focus:ring-primary/50 transition-smooth">
+                        </div>
+                    </div>
+                    <div class="mt-6">
+                        <button type="submit" class="px-6 py-3 btn-gradient text-white font-medium rounded-xl shadow-button hover:shadow-glow transition-smooth">
+                            Shop erstellen
+                        </button>
+                    </div>
+                </form>
+            </section>
 
-                        {% if shop.devices %}
-                        <div class="bg-gray-50 rounded-lg p-4">
-                            <table class="w-full text-sm">
-                                <thead>
-                                    <tr class="text-left text-gray-500">
-                                        <th class="pb-2">Gerät</th>
-                                        <th class="pb-2">Device ID</th>
-                                        <th class="pb-2">Status</th>
-                                        <th class="pb-2">Zuletzt gesehen</th>
-                                        <th class="pb-2 text-right">Aktionen</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-200">
-                                    {% for device in shop.devices %}
-                                    <tr>
-                                        <td class="py-2 font-medium text-gray-900">{{ device.name or 'Unbenannt' }}</td>
-                                        <td class="py-2 text-gray-600 font-mono text-xs">{{ device.device_id }}</td>
-                                        <td class="py-2">
-                                            {% if device.status == 'online' %}
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                Online
-                                            </span>
-                                            {% elif device.status == 'pending' %}
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                                Warte auf Registrierung
-                                            </span>
+            <!-- Create Device Section -->
+            {% if shops %}
+            <section class="bg-white rounded-2xl shadow-card border border-surface-tertiary/30 overflow-hidden mb-8">
+                <div class="px-6 py-4 border-b border-surface-tertiary/50 bg-surface-secondary/30">
+                    <h2 class="text-lg font-semibold text-text-primary">Neues Gerät hinzufügen</h2>
+                </div>
+                <form action="/admin/device/create" method="POST" class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="device_shop_id" class="block text-sm font-medium text-text-secondary mb-2">Shop</label>
+                            <select id="device_shop_id" name="shop_id" required
+                                    class="w-full px-4 py-3 bg-surface-secondary border-0 rounded-xl focus:ring-2 focus:ring-primary/50 transition-smooth">
+                                {% for shop in shops %}
+                                <option value="{{ shop.id }}">{{ shop.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="device_name" class="block text-sm font-medium text-text-secondary mb-2">Gerätename</label>
+                            <input type="text" id="device_name" name="device_name" required
+                                   placeholder="z.B. Haupteingang"
+                                   class="w-full px-4 py-3 bg-surface-secondary border-0 rounded-xl focus:ring-2 focus:ring-primary/50 transition-smooth">
+                        </div>
+                    </div>
+                    <div class="mt-6">
+                        <button type="submit" class="px-6 py-3 bg-success text-white font-medium rounded-xl hover:bg-success/90 transition-smooth shadow-lg shadow-success/30">
+                            Registration Token erstellen
+                        </button>
+                    </div>
+                </form>
+            </section>
+            {% endif %}
+
+            <!-- Existing Shops -->
+            <section class="bg-white rounded-2xl shadow-card border border-surface-tertiary/30 overflow-hidden">
+                <div class="px-6 py-4 border-b border-surface-tertiary/50 bg-surface-secondary/30">
+                    <h2 class="text-lg font-semibold text-text-primary">Shops & Geräte</h2>
+                </div>
+                <div class="divide-y divide-surface-tertiary/50">
+                    {% if shops %}
+                        {% for shop in shops %}
+                        <div class="p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-text-primary">{{ shop.name }}</h3>
+                                    <p class="text-sm text-text-secondary">ID: <code class="bg-surface-secondary px-2 py-0.5 rounded text-xs">{{ shop.id }}</code> · {{ shop.device_count }} Gerät(e)</p>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <a href="/shop/{{ shop.id }}" class="text-primary hover:text-primary-hover text-sm font-medium transition-smooth">
+                                        Öffnen →
+                                    </a>
+                                    <button onclick="deleteShop('{{ shop.id }}', '{{ shop.name }}', {{ shop.device_count }})"
+                                            class="text-danger hover:text-danger/80 text-sm font-medium transition-smooth">
+                                        Löschen
+                                    </button>
+                                </div>
+                            </div>
+
+                            {% if shop.devices %}
+                            <div class="bg-surface-secondary/50 rounded-xl p-4 overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead>
+                                        <tr class="text-left text-text-secondary">
+                                            <th class="pb-3 font-medium">Gerät</th>
+                                            <th class="pb-3 font-medium">Device ID</th>
+                                            <th class="pb-3 font-medium">Status</th>
+                                            <th class="pb-3 font-medium">Zuletzt gesehen</th>
+                                            <th class="pb-3 text-right font-medium">Aktionen</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-surface-tertiary/50">
+                                        {% for device in shop.devices %}
+                                        <tr>
+                                            <td class="py-3 font-medium text-text-primary">{{ device.name or 'Unbenannt' }}</td>
+                                            <td class="py-3 text-text-secondary font-mono text-xs">{{ device.device_id[:20] }}...</td>
+                                            <td class="py-3">
+                                                {% if device.status == 'online' %}
+                                                <span class="status-badge bg-success-light text-success">
+                                                    <span class="w-1.5 h-1.5 bg-success rounded-full"></span>
+                                                    Online
+                                                </span>
+                                                {% elif device.status == 'pending' %}
+                                                <span class="status-badge bg-warning/10 text-warning">
+                                                    <span class="w-1.5 h-1.5 bg-warning rounded-full"></span>
+                                                    Wartend
+                                                </span>
+                                                {% else %}
+                                                <span class="status-badge bg-surface-tertiary text-text-tertiary">
+                                                    <span class="w-1.5 h-1.5 bg-text-tertiary rounded-full"></span>
+                                                    Offline
+                                                </span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="py-3 text-text-secondary text-xs">{{ device.last_seen or '-' }}</td>
+                                            <td class="py-3 text-right">
+                                                <button onclick="deleteDevice('{{ device.device_id }}', '{{ device.name or device.device_id }}')"
+                                                        class="text-danger hover:text-danger/80 text-sm font-medium transition-smooth">
+                                                    Löschen
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <p class="text-text-tertiary text-sm">Keine Geräte in diesem Shop.</p>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="p-12 text-center">
+                        <div class="w-20 h-20 bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-10 h-10 text-primary/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-text-primary">Keine Shops</h3>
+                        <p class="text-text-secondary mt-1">Erstelle oben deinen ersten Shop.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+
+        <!-- USERS TAB -->
+        <div x-show="activeTab === 'users'" x-cloak>
+            <!-- Create User Section -->
+            <section class="bg-white rounded-2xl shadow-card border border-surface-tertiary/30 overflow-hidden mb-8">
+                <div class="px-6 py-4 border-b border-surface-tertiary/50 bg-surface-secondary/30">
+                    <h2 class="text-lg font-semibold text-text-primary">Neuen Benutzer anlegen</h2>
+                </div>
+                <form action="/admin/user/create" method="POST" class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label for="new_username" class="block text-sm font-medium text-text-secondary mb-2">Benutzername</label>
+                            <input type="text" id="new_username" name="username" required
+                                   placeholder="z.B. mueller"
+                                   class="w-full px-4 py-3 bg-surface-secondary border-0 rounded-xl focus:ring-2 focus:ring-primary/50 transition-smooth">
+                        </div>
+                        <div>
+                            <label for="new_password" class="block text-sm font-medium text-text-secondary mb-2">Passwort</label>
+                            <input type="password" id="new_password" name="password" required
+                                   placeholder="Sicheres Passwort"
+                                   class="w-full px-4 py-3 bg-surface-secondary border-0 rounded-xl focus:ring-2 focus:ring-primary/50 transition-smooth">
+                        </div>
+                        <div>
+                            <label for="new_email" class="block text-sm font-medium text-text-secondary mb-2">E-Mail (optional)</label>
+                            <input type="email" id="new_email" name="email"
+                                   placeholder="email@beispiel.de"
+                                   class="w-full px-4 py-3 bg-surface-secondary border-0 rounded-xl focus:ring-2 focus:ring-primary/50 transition-smooth">
+                        </div>
+                        <div>
+                            <label for="new_role" class="block text-sm font-medium text-text-secondary mb-2">Rolle</label>
+                            <select id="new_role" name="role"
+                                    class="w-full px-4 py-3 bg-surface-secondary border-0 rounded-xl focus:ring-2 focus:ring-primary/50 transition-smooth">
+                                <option value="operator">Operator (nur zugewiesene Shops)</option>
+                                <option value="admin">Admin (voller Zugriff)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-6">
+                        <button type="submit" class="px-6 py-3 btn-gradient text-white font-medium rounded-xl shadow-button hover:shadow-glow transition-smooth">
+                            Benutzer anlegen
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- User List -->
+            <section class="bg-white rounded-2xl shadow-card border border-surface-tertiary/30 overflow-hidden">
+                <div class="px-6 py-4 border-b border-surface-tertiary/50 bg-surface-secondary/30 flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-text-primary">Alle Benutzer</h2>
+                    <span class="text-sm text-text-secondary">{{ users|length }} Benutzer</span>
+                </div>
+                <div class="divide-y divide-surface-tertiary/50">
+                    {% if users %}
+                        {% for u in users %}
+                        <div class="p-6" x-data="{ expanded: false, editing: false }">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4">
+                                    <!-- Avatar -->
+                                    <div class="w-12 h-12 rounded-xl flex items-center justify-center font-semibold text-lg
+                                                {% if u.role == 'admin' %}bg-gradient-to-br from-primary to-primary-hover text-white{% else %}bg-surface-secondary text-text-secondary{% endif %}">
+                                        {{ u.username[:2]|upper }}
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center space-x-2">
+                                            <h3 class="font-semibold text-text-primary">{{ u.username }}</h3>
+                                            {% if u.role == 'admin' %}
+                                            <span class="px-2 py-0.5 bg-primary/10 text-primary text-xs font-medium rounded-full">Admin</span>
                                             {% else %}
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                                                Offline
-                                            </span>
+                                            <span class="px-2 py-0.5 bg-surface-tertiary text-text-secondary text-xs font-medium rounded-full">Operator</span>
                                             {% endif %}
-                                        </td>
-                                        <td class="py-2 text-gray-500">{{ device.last_seen or '-' }}</td>
-                                        <td class="py-2 text-right">
-                                            <button onclick="deleteDevice('{{ device.device_id }}', '{{ device.name or device.device_id }}')"
-                                                    class="text-red-600 hover:text-red-800 text-sm font-medium">
-                                                Löschen
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                                        </div>
+                                        <p class="text-sm text-text-secondary">
+                                            {{ u.email or 'Keine E-Mail' }} · {{ u.shop_count }} Shop(s)
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <button @click="expanded = !expanded"
+                                            class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-secondary rounded-lg transition-smooth">
+                                        <span x-text="expanded ? 'Schließen' : 'Details'"></span>
+                                    </button>
+                                    {% if u.id != user.id %}
+                                    <button onclick="deleteUser({{ u.id }}, '{{ u.username }}')"
+                                            class="px-4 py-2 text-sm font-medium text-danger hover:bg-danger/5 rounded-lg transition-smooth">
+                                        Löschen
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Expanded Details -->
+                            <div x-show="expanded" x-cloak class="mt-6 space-y-6">
+                                <!-- Assigned Shops -->
+                                <div class="bg-surface-secondary/50 rounded-xl p-4">
+                                    <h4 class="font-medium text-text-primary mb-3">Zugewiesene Shops</h4>
+                                    {% if u.shops %}
+                                    <div class="space-y-2">
+                                        {% for shop in u.shops %}
+                                        <div class="flex items-center justify-between bg-white rounded-lg px-4 py-2">
+                                            <div>
+                                                <span class="font-medium text-text-primary">{{ shop.name }}</span>
+                                                <span class="text-xs text-text-tertiary ml-2">({{ shop.permission }})</span>
+                                            </div>
+                                            {% if u.role != 'admin' %}
+                                            <form action="/admin/user/{{ u.id }}/remove-shop/{{ shop.id }}" method="POST" class="inline">
+                                                <button type="submit" class="text-danger text-sm hover:underline">Entfernen</button>
+                                            </form>
+                                            {% endif %}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <p class="text-text-tertiary text-sm">
+                                        {% if u.role == 'admin' %}
+                                        Admins haben automatisch Zugriff auf alle Shops.
+                                        {% else %}
+                                        Noch keine Shops zugewiesen.
+                                        {% endif %}
+                                    </p>
+                                    {% endif %}
+
+                                    <!-- Add Shop Assignment -->
+                                    {% if u.role != 'admin' and shops %}
+                                    <form action="/admin/user/{{ u.id }}/assign-shop" method="POST" class="mt-4 flex items-center space-x-3">
+                                        <select name="shop_id" required class="flex-1 px-4 py-2 bg-white border border-surface-tertiary rounded-lg text-sm focus:ring-2 focus:ring-primary/50">
+                                            <option value="">Shop auswählen...</option>
+                                            {% for shop in shops %}
+                                            {% if shop.id not in u.shops|map(attribute='id')|list %}
+                                            <option value="{{ shop.id }}">{{ shop.name }}</option>
+                                            {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                        <select name="permission" class="px-4 py-2 bg-white border border-surface-tertiary rounded-lg text-sm focus:ring-2 focus:ring-primary/50">
+                                            <option value="control">Steuerung</option>
+                                            <option value="view">Nur Ansicht</option>
+                                        </select>
+                                        <button type="submit" class="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-hover transition-smooth">
+                                            Zuweisen
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Edit User -->
+                                <div class="bg-surface-secondary/50 rounded-xl p-4">
+                                    <h4 class="font-medium text-text-primary mb-3">Benutzer bearbeiten</h4>
+                                    <form action="/admin/user/{{ u.id }}/update" method="POST" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label class="block text-xs font-medium text-text-secondary mb-1">Neues Passwort</label>
+                                            <input type="password" name="password" placeholder="Leer lassen = unverändert"
+                                                   class="w-full px-4 py-2 bg-white border border-surface-tertiary rounded-lg text-sm focus:ring-2 focus:ring-primary/50">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-text-secondary mb-1">E-Mail</label>
+                                            <input type="email" name="email" value="{{ u.email or '' }}" placeholder="email@beispiel.de"
+                                                   class="w-full px-4 py-2 bg-white border border-surface-tertiary rounded-lg text-sm focus:ring-2 focus:ring-primary/50">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-text-secondary mb-1">Rolle</label>
+                                            <div class="flex space-x-2">
+                                                <select name="role" class="flex-1 px-4 py-2 bg-white border border-surface-tertiary rounded-lg text-sm focus:ring-2 focus:ring-primary/50">
+                                                    <option value="">Unverändert</option>
+                                                    <option value="operator" {% if u.role == 'operator' %}selected{% endif %}>Operator</option>
+                                                    <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Admin</option>
+                                                </select>
+                                                <button type="submit" class="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-hover transition-smooth">
+                                                    Speichern
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
-                        {% else %}
-                        <p class="text-gray-500 text-sm">Keine Geräte in diesem Shop.</p>
-                        {% endif %}
+                        {% endfor %}
+                    {% else %}
+                    <div class="p-12 text-center">
+                        <div class="w-20 h-20 bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-10 h-10 text-primary/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-text-primary">Keine Benutzer</h3>
+                        <p class="text-text-secondary mt-1">Erstelle oben den ersten Benutzer.</p>
                     </div>
-                    {% endfor %}
-                {% else %}
-                <div class="p-12 text-center">
-                    <div class="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-lg font-semibold text-gray-900">Keine Shops</h3>
-                    <p class="text-gray-500 mt-1">Erstelle oben deinen ersten Shop.</p>
+                    {% endif %}
                 </div>
-                {% endif %}
-            </div>
-        </section>
+            </section>
+        </div>
 
     </main>
 </div>
 
 <script>
+function adminPanel() {
+    return {
+        activeTab: 'shops'
+    }
+}
+
 async function deleteDevice(deviceId, deviceName) {
     if (!confirm(`Gerät "${deviceName}" wirklich löschen?\n\nDies kann nicht rückgängig gemacht werden.`)) {
         return;
@@ -222,7 +440,6 @@ async function deleteDevice(deviceId, deviceName) {
         const data = await response.json();
 
         if (response.ok && data.success) {
-            alert('Gerät erfolgreich gelöscht!');
             window.location.reload();
         } else {
             alert('Fehler: ' + (data.detail || data.error || 'Unbekannter Fehler'));
@@ -243,10 +460,21 @@ async function deleteShop(shopId, shopName, deviceCount) {
         return;
     }
 
-    // Use form submission for shop delete (POST route)
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = `/admin/shop/${shopId}/delete`;
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function deleteUser(userId, username) {
+    if (!confirm(`Benutzer "${username}" wirklich löschen?\n\nAlle Shop-Zuweisungen werden entfernt.\nDies kann nicht rückgängig gemacht werden.`)) {
+        return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/admin/user/${userId}/delete`;
     document.body.appendChild(form);
     form.submit();
 }

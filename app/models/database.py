@@ -432,3 +432,172 @@ def get_demo_device_ids() -> list[str]:
 def is_demo_device(device_id: str) -> bool:
     """Check if device is a demo device."""
     return device_id in get_demo_device_ids()
+
+
+# =============================================================================
+# User Management Functions
+# =============================================================================
+
+async def get_all_users():
+    """Get all users with their shop assignments."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            """SELECT u.*,
+                      (SELECT COUNT(*) FROM user_shops WHERE user_id = u.id) as shop_count
+               FROM users u
+               ORDER BY u.role DESC, u.username ASC"""
+        ) as cursor:
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
+
+
+async def get_user_by_id(user_id: int):
+    """Get user by ID."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            "SELECT * FROM users WHERE id = ?", (user_id,)
+        ) as cursor:
+            row = await cursor.fetchone()
+            return dict(row) if row else None
+
+
+async def create_user(username: str, password: str, role: str = "operator", email: str = None):
+    """
+    Create a new user.
+
+    Args:
+        username: Unique username
+        password: Plain text password (will be hashed)
+        role: User role (admin or operator)
+        email: Optional email address
+
+    Returns:
+        New user ID
+    """
+    import bcrypt
+
+    password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            """INSERT INTO users (username, password_hash, role, email)
+               VALUES (?, ?, ?, ?)""",
+            (username, password_hash, role, email)
+        )
+        await db.commit()
+        return cursor.lastrowid
+
+
+async def update_user(user_id: int, username: str = None, password: str = None,
+                      role: str = None, email: str = None):
+    """Update user details."""
+    import bcrypt
+
+    async with aiosqlite.connect(DB_PATH) as db:
+        if username:
+            await db.execute(
+                "UPDATE users SET username = ? WHERE id = ?",
+                (username, user_id)
+            )
+        if password:
+            password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            await db.execute(
+                "UPDATE users SET password_hash = ? WHERE id = ?",
+                (password_hash, user_id)
+            )
+        if role:
+            await db.execute(
+                "UPDATE users SET role = ? WHERE id = ?",
+                (role, user_id)
+            )
+        if email is not None:
+            await db.execute(
+                "UPDATE users SET email = ? WHERE id = ?",
+                (email, user_id)
+            )
+        await db.commit()
+
+
+async def delete_user(user_id: int) -> bool:
+    """
+    Delete a user and all their shop assignments.
+
+    Returns:
+        True if user was deleted
+    """
+    async with aiosqlite.connect(DB_PATH) as db:
+        # Check if user exists
+        async with db.execute(
+            "SELECT id FROM users WHERE id = ?", (user_id,)
+        ) as cursor:
+            if not await cursor.fetchone():
+                return False
+
+        # Delete user (cascades to user_shops and sessions)
+        await db.execute("DELETE FROM user_shops WHERE user_id = ?", (user_id,))
+        await db.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+        await db.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        await db.commit()
+        return True
+
+
+async def get_user_shop_assignments(user_id: int):
+    """Get all shop assignments for a user."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            """SELECT s.*, us.permission
+               FROM shops s
+               JOIN user_shops us ON s.id = us.shop_id
+               WHERE us.user_id = ?
+               ORDER BY s.name""",
+            (user_id,)
+        ) as cursor:
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
+
+
+async def assign_user_to_shop(user_id: int, shop_id: str, permission: str = "control"):
+    """
+    Assign a user to a shop.
+
+    Args:
+        user_id: User ID
+        shop_id: Shop ID
+        permission: Permission level (view, control)
+    """
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """INSERT OR REPLACE INTO user_shops (user_id, shop_id, permission)
+               VALUES (?, ?, ?)""",
+            (user_id, shop_id, permission)
+        )
+        await db.commit()
+
+
+async def remove_user_from_shop(user_id: int, shop_id: str):
+    """Remove a user's access to a shop."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "DELETE FROM user_shops WHERE user_id = ? AND shop_id = ?",
+            (user_id, shop_id)
+        )
+        await db.commit()
+
+
+async def get_shop_users(shop_id: str):
+    """Get all users assigned to a shop."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            """SELECT u.id, u.username, u.email, u.role, us.permission
+               FROM users u
+               JOIN user_shops us ON u.id = us.user_id
+               WHERE us.shop_id = ?
+               ORDER BY u.username""",
+            (shop_id,)
+        ) as cursor:
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
