@@ -35,6 +35,11 @@
     <!-- Tab Navigation -->
     <div class="sticky top-14 z-40 bg-white border-b border-gray-200">
         <div class="px-4 flex space-x-1">
+            <button @click="activeTab = 'dashboard'"
+                    :class="activeTab === 'dashboard' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'"
+                    class="px-4 py-3 text-sm font-medium transition-smooth">
+                Dashboard
+            </button>
             <button @click="activeTab = 'ueberwachung'"
                     :class="activeTab === 'ueberwachung' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'"
                     class="px-4 py-3 text-sm font-medium transition-smooth">
@@ -44,11 +49,6 @@
                     :class="activeTab === 'service' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'"
                     class="px-4 py-3 text-sm font-medium transition-smooth">
                 Service
-            </button>
-            <button @click="activeTab = 'dashboard'"
-                    :class="activeTab === 'dashboard' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'"
-                    class="px-4 py-3 text-sm font-medium transition-smooth">
-                Dashboard
             </button>
             <button @click="activeTab = 'geraete'"
                     :class="activeTab === 'geraete' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'"
@@ -113,62 +113,56 @@
         <div class="mt-6 bg-white rounded-2xl border border-gray-200 p-4">
             <div class="space-y-4">
                 <label class="flex items-start space-x-3 cursor-pointer">
-                    <input type="checkbox" checked
-                           class="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary">
-                    <div>
-                        <span class="font-medium text-gray-900">Tageszeitabhängig</span>
-                        <p class="text-sm text-gray-500">Schaltet das Außenlicht nach der Sonne.</p>
-                    </div>
-                </label>
-
-                <label class="flex items-start space-x-3 cursor-pointer">
-                    <input type="checkbox"
+                    <input type="checkbox" x-model="lightingOptions.openingHours"
                            class="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary">
                     <div>
                         <span class="font-medium text-gray-900">Öffnungszeitenabhängig</span>
-                        <p class="text-sm text-gray-500">Schaltet das Außenlicht laut Öffnungszeiten.</p>
+                        <p class="text-sm text-gray-500">Aktiviert Beleuchtung entsprechend der Geschäftszeiten.</p>
                     </div>
                 </label>
 
                 <label class="flex items-start space-x-3 cursor-pointer">
-                    <input type="checkbox" checked
+                    <input type="checkbox" x-model="lightingOptions.timeControlled" checked
                            class="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary">
                     <div>
                         <span class="font-medium text-gray-900">Zeitgesteuert</span>
-                        <p class="text-sm text-gray-500">Schaltet im angegebenen Zeitraum aus.</p>
+                        <p class="text-sm text-gray-500">Deaktiviert Beleuchtung im festgelegten Zeitraum.</p>
                     </div>
                 </label>
             </div>
 
             <!-- Time Slider -->
-            <div class="mt-6">
-                <div class="relative h-2 bg-gray-200 rounded-full">
-                    <div class="absolute h-2 bg-red-400 rounded-full" style="left: 25%; width: 30%;"></div>
-                    <!-- Markers -->
-                    <div class="absolute w-4 h-4 bg-white border-2 border-red-400 rounded-full -mt-1 cursor-pointer" style="left: 25%;"></div>
-                    <div class="absolute w-4 h-4 bg-white border-2 border-red-400 rounded-full -mt-1 cursor-pointer" style="left: 55%;"></div>
+            <div class="mt-6" x-show="lightingOptions.timeControlled">
+                <p class="text-sm text-gray-600 mb-3">Beleuchtung aus von <span class="font-semibold text-red-500" x-text="timeSlider.start + ':00'"></span> bis <span class="font-semibold text-red-500" x-text="timeSlider.end + ':00'"></span></p>
+
+                <div class="relative h-2 bg-gray-200 rounded-full"
+                     x-ref="sliderTrack"
+                     @mousedown="startDrag($event)"
+                     @touchstart="startDrag($event)">
+                    <!-- Active range -->
+                    <div class="absolute h-2 bg-red-400 rounded-full transition-all"
+                         :style="'left: ' + sliderStartPercent + '%; width: ' + sliderWidthPercent + '%'"></div>
+                    <!-- Start handle -->
+                    <div class="absolute w-5 h-5 bg-white border-2 border-red-400 rounded-full -mt-1.5 cursor-grab active:cursor-grabbing shadow-md transition-all hover:scale-110"
+                         :style="'left: calc(' + sliderStartPercent + '% - 10px)'"
+                         @mousedown.stop="dragHandle = 'start'"
+                         @touchstart.stop="dragHandle = 'start'"></div>
+                    <!-- End handle -->
+                    <div class="absolute w-5 h-5 bg-white border-2 border-red-400 rounded-full -mt-1.5 cursor-grab active:cursor-grabbing shadow-md transition-all hover:scale-110"
+                         :style="'left: calc(' + sliderEndPercent + '% - 10px)'"
+                         @mousedown.stop="dragHandle = 'end'"
+                         @touchstart.stop="dragHandle = 'end'"></div>
                 </div>
                 <!-- Time Labels -->
                 <div class="flex justify-between mt-3 text-xs text-gray-500">
                     <span>17</span>
-                    <span>18</span>
                     <span>19</span>
-                    <span>20</span>
                     <span>21</span>
-                    <span>22</span>
                     <span>23</span>
-                    <span>24</span>
                     <span>1</span>
-                    <span>2</span>
                     <span>3</span>
-                    <span>4</span>
                     <span>5</span>
-                    <span>6</span>
                     <span>7</span>
-                </div>
-                <div class="flex justify-center space-x-8 mt-2">
-                    <span class="text-sm font-medium text-red-500">23</span>
-                    <span class="text-sm font-medium text-red-500">4</span>
                 </div>
             </div>
         </div>
@@ -211,103 +205,94 @@
             </label>
         </div>
 
-        <!-- Quick Action Buttons -->
-        <div class="space-y-3 mb-6">
-            <button @click="triggerServiceAction('display')"
-                    class="w-full py-4 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-xl
-                           flex items-center justify-center space-x-3 transition-smooth shadow-md">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                </svg>
-                <span>DISPLAY-REINIGUNG</span>
-            </button>
-
+        <!-- Quick Action Button -->
+        <div class="mb-6">
             <button @click="lockDoor(15)"
                     class="w-full py-4 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl
                            flex items-center justify-center space-x-3 transition-smooth shadow-md">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                 </svg>
-                <span>15 MINUTEN TÜR VERSPERREN</span>
+                <span>TÜR FÜR 15 MIN SPERREN</span>
             </button>
         </div>
 
         <!-- Service Checklist -->
         <div class="bg-white rounded-2xl border border-gray-200 divide-y divide-gray-100">
-            <!-- Kaffeemaschine -->
+            <!-- Getränkeautomat -->
             <div class="p-4">
                 <label class="flex items-start space-x-3 cursor-pointer">
                     <input type="checkbox" x-model="serviceChecks.kaffee"
                            class="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary">
                     <div>
-                        <span class="font-medium text-gray-900">Kaffeemaschine</span>
+                        <span class="font-medium text-gray-900">Getränkeautomat</span>
                         <ul class="mt-1 text-sm text-gray-500 list-disc list-inside">
-                            <li>Zucker, Kaffee und Becher nachfüllen</li>
-                            <li>Maschine abwischen</li>
+                            <li>Zutaten und Becher auffüllen</li>
+                            <li>Gerät reinigen</li>
                         </ul>
                     </div>
                 </label>
             </div>
 
-            <!-- Kaffee-Milchsystem -->
+            <!-- Milchsystem -->
             <div class="p-4">
                 <label class="flex items-start space-x-3 cursor-pointer">
                     <input type="checkbox" x-model="serviceChecks.milch"
                            class="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary">
                     <div>
-                        <span class="font-medium text-gray-900">Kaffee-Milchsystem reinigen</span>
+                        <span class="font-medium text-gray-900">Milchsystem warten</span>
                     </div>
                 </label>
             </div>
 
-            <!-- Grundreinigung -->
+            <!-- Tägliche Reinigung -->
             <div class="p-4">
                 <label class="flex items-start space-x-3 cursor-pointer">
                     <input type="checkbox" x-model="serviceChecks.reinigung"
                            class="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary">
                     <div>
-                        <span class="font-medium text-gray-900">Grundreinigung</span>
+                        <span class="font-medium text-gray-900">Tägliche Reinigung</span>
                         <ul class="mt-1 text-sm text-gray-500 list-disc list-inside">
-                            <li>Bezahltisch reinigen</li>
-                            <li>Brotzangen reinigen & desinfizieren</li>
-                            <li>Fußabstreifer absaugen</li>
-                            <li>Regale reinigen</li>
-                            <li>Boden saugen</li>
-                            <li>Mülleimer ausleeren & neuer Sack</li>
-                            <li>Terminal-Display reinigen</li>
-                            <li>Steamen (bei Bedarf)</li>
+                            <li>Kassenbereich säubern</li>
+                            <li>Utensilien desinfizieren</li>
+                            <li>Eingangsbereich reinigen</li>
+                            <li>Regale abwischen</li>
+                            <li>Böden reinigen</li>
+                            <li>Abfall entsorgen</li>
+                            <li>Bildschirme reinigen</li>
+                            <li>Dampfreinigung (nach Bedarf)</li>
                         </ul>
                     </div>
                 </label>
             </div>
 
-            <!-- Kontrolle -->
+            <!-- Bestandskontrolle -->
             <div class="p-4">
                 <label class="flex items-start space-x-3 cursor-pointer">
                     <input type="checkbox" x-model="serviceChecks.kontrolle"
                            class="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary">
                     <div>
-                        <span class="font-medium text-gray-900">Kontrolle</span>
+                        <span class="font-medium text-gray-900">Bestandskontrolle</span>
                         <ul class="mt-1 text-sm text-gray-500 list-disc list-inside">
-                            <li>Produkte nach vorne schlichten</li>
-                            <li>Klimaanlage / Heizung kontrollieren</li>
-                            <li>Gemüse kontrollieren</li>
+                            <li>Waren nach vorne sortieren</li>
+                            <li>Temperaturregelung prüfen</li>
+                            <li>Frischeprodukte kontrollieren</li>
                         </ul>
                     </div>
                 </label>
             </div>
 
-            <!-- Warenlieferung -->
+            <!-- Lieferungsannahme -->
             <div class="p-4">
                 <label class="flex items-start space-x-3 cursor-pointer">
                     <input type="checkbox" x-model="serviceChecks.waren"
                            class="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary">
                     <div>
-                        <span class="font-medium text-gray-900">Warenlieferung</span>
+                        <span class="font-medium text-gray-900">Lieferungsannahme</span>
                         <ul class="mt-1 text-sm text-gray-500 list-disc list-inside">
-                            <li>Lieferschein kontrollieren</li>
-                            <li>Waren einräumen</li>
-                            <li>MHD prüfen</li>
+                            <li>Lieferdokumente prüfen</li>
+                            <li>Waren verräumen</li>
+                            <li>Haltbarkeit kontrollieren</li>
                         </ul>
                     </div>
                 </label>
@@ -683,7 +668,7 @@
 <script>
 function shopDashboard() {
     return {
-        activeTab: 'ueberwachung',
+        activeTab: 'dashboard',
         loading: {},
         success: {},
         showAddDevice: false,
@@ -694,6 +679,47 @@ function shopDashboard() {
             kontrolle: false,
             waren: false
         },
+        lightingOptions: {
+            openingHours: false,
+            timeControlled: true
+        },
+        timeSlider: {
+            start: 23,
+            end: 4
+        },
+        dragHandle: null,
+
+        // Time slider spans 17-7 (15 hours, wrapping through midnight)
+        // We map this to 0-100%
+        timeToPercent(hour) {
+            // 17 = 0%, 7 = 100% (15 hour range: 17,18,19,20,21,22,23,0,1,2,3,4,5,6,7)
+            let adjusted = hour >= 17 ? hour - 17 : hour + 7;
+            return (adjusted / 14) * 100;
+        },
+
+        percentToTime(percent) {
+            let adjusted = Math.round((percent / 100) * 14);
+            let hour = adjusted < 7 ? adjusted + 17 : adjusted - 7;
+            if (hour >= 24) hour -= 24;
+            return hour;
+        },
+
+        get sliderStartPercent() {
+            return this.timeToPercent(this.timeSlider.start);
+        },
+
+        get sliderEndPercent() {
+            return this.timeToPercent(this.timeSlider.end);
+        },
+
+        get sliderWidthPercent() {
+            let start = this.sliderStartPercent;
+            let end = this.sliderEndPercent;
+            if (end < start) {
+                return (100 - start) + end;
+            }
+            return end - start;
+        },
 
         get totalTasks() {
             return Object.keys(this.serviceChecks).length;
@@ -701,6 +727,46 @@ function shopDashboard() {
 
         get completedTasks() {
             return Object.values(this.serviceChecks).filter(v => v).length;
+        },
+
+        startDrag(event) {
+            if (!this.dragHandle) return;
+
+            const track = this.$refs.sliderTrack;
+            const rect = track.getBoundingClientRect();
+
+            const updatePosition = (clientX) => {
+                const percent = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+                const hour = this.percentToTime(percent);
+
+                if (this.dragHandle === 'start') {
+                    this.timeSlider.start = hour;
+                } else if (this.dragHandle === 'end') {
+                    this.timeSlider.end = hour;
+                }
+            };
+
+            const onMove = (e) => {
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                updatePosition(clientX);
+            };
+
+            const onEnd = () => {
+                this.dragHandle = null;
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onEnd);
+                document.removeEventListener('touchmove', onMove);
+                document.removeEventListener('touchend', onEnd);
+            };
+
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onEnd);
+            document.addEventListener('touchmove', onMove);
+            document.addEventListener('touchend', onEnd);
+
+            // Initial position update
+            const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+            updatePosition(clientX);
         },
 
         async openDoor(deviceId) {
@@ -724,13 +790,7 @@ function shopDashboard() {
             }
         },
 
-        triggerServiceAction(action) {
-            // Placeholder for service actions
-            alert('Service-Aktion: ' + action + '\n\nDiese Funktion wird in einer späteren Version implementiert.');
-        },
-
         lockDoor(minutes) {
-            // Placeholder for door lock
             alert('Tür für ' + minutes + ' Minuten sperren\n\nDiese Funktion wird in einer späteren Version implementiert.');
         }
     }
