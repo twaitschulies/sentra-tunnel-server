@@ -120,8 +120,15 @@ async def shop_view(request: Request, shop_id: str, user: dict = Depends(require
                         device['last_status'] = status.get('last_status', {})
                     else:
                         device['online'] = False
+                        device['last_status'] = {}
                 else:
                     device['online'] = False
+                    device['last_status'] = {}
+        else:
+            # No broker available, mark all devices as offline
+            for device in devices:
+                device['online'] = False
+                device['last_status'] = {}
 
         return templates.TemplateResponse(
             "pages/shop.html",
