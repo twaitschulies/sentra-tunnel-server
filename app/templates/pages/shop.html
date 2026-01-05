@@ -204,16 +204,44 @@
         </div>
 
         <!-- Quick Action Button -->
+        {% if devices %}
         <div class="mb-6">
-            <button @click="lockDoor(15)"
+            <button @click="lockDoor('{{ devices[0].device_id }}', 15)"
+                    :disabled="lockingDoor"
                     class="w-full py-4 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl
-                           flex items-center justify-center space-x-3 transition-smooth shadow-md">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                           flex items-center justify-center space-x-3 transition-smooth shadow-md
+                           disabled:opacity-50 disabled:cursor-not-allowed">
+                <template x-if="lockingDoor">
+                    <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                </template>
+                <template x-if="!lockingDoor && !doorLocked">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                </template>
+                <template x-if="doorLocked">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </template>
+                <span x-text="doorLocked ? 'TÜR GESPERRT' : 'TÜR FÜR 15 MIN SPERREN'"></span>
+            </button>
+            <!-- Unlock button (shows when door is locked) -->
+            <button x-show="doorLocked"
+                    @click="unlockDoor('{{ devices[0].device_id }}')"
+                    :disabled="lockingDoor"
+                    class="w-full mt-2 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl
+                           flex items-center justify-center space-x-2 transition-smooth">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
                 </svg>
-                <span>TÜR FÜR 15 MIN SPERREN</span>
+                <span>Sperre aufheben</span>
             </button>
         </div>
+        {% endif %}
 
         <!-- Service Checklist -->
         <div class="bg-white rounded-2xl border border-gray-200 divide-y divide-gray-100">
@@ -670,6 +698,8 @@ function shopDashboard() {
         loading: {},
         success: {},
         showAddDevice: false,
+        lockingDoor: false,
+        doorLocked: false,
         serviceChecks: {
             kaffee: false,
             milch: false,
@@ -781,8 +811,53 @@ function shopDashboard() {
             }
         },
 
-        lockDoor(minutes) {
-            alert('Tür für ' + minutes + ' Minuten sperren\n\nDiese Funktion wird in einer späteren Version implementiert.');
+        async lockDoor(deviceId, minutes) {
+            this.lockingDoor = true;
+
+            try {
+                const durationHours = minutes / 60;  // Convert minutes to hours
+                const response = await fetch(`/api/commands/${deviceId}/override?mode=access_blocked&duration_hours=${durationHours}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    this.doorLocked = true;
+                    // Auto-reset after duration
+                    setTimeout(() => {
+                        this.doorLocked = false;
+                    }, minutes * 60 * 1000);
+                } else {
+                    alert(data.error || 'Fehler beim Sperren der Tür');
+                }
+            } catch (e) {
+                console.error('Lock door error:', e);
+                alert('Verbindungsfehler');
+            } finally {
+                this.lockingDoor = false;
+            }
+        },
+
+        async unlockDoor(deviceId) {
+            this.lockingDoor = true;
+
+            try {
+                const response = await fetch(`/api/commands/${deviceId}/override`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    this.doorLocked = false;
+                } else {
+                    alert(data.error || 'Fehler beim Entsperren');
+                }
+            } catch (e) {
+                console.error('Unlock door error:', e);
+                alert('Verbindungsfehler');
+            } finally {
+                this.lockingDoor = false;
+            }
         }
     }
 }

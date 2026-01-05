@@ -182,7 +182,7 @@ async def set_override(
     request: Request,
     device_id: str,
     mode: str,
-    duration_hours: int = 1,
+    duration_hours: float = 1.0,
     user: dict = Depends(require_auth)
 ):
     """Set temporary door mode override."""
@@ -193,4 +193,15 @@ async def set_override(
             "duration_hours": duration_hours
         }
     )
+    return await execute_command(request, device_id, command, user)
+
+
+@router.delete("/{device_id}/override")
+async def clear_override(
+    request: Request,
+    device_id: str,
+    user: dict = Depends(require_auth)
+):
+    """Clear door mode override and return to normal operation."""
+    command = CommandRequest(action="clear_override")
     return await execute_command(request, device_id, command, user)
