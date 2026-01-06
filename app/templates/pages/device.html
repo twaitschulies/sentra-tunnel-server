@@ -54,9 +54,7 @@
             {% endif %}
         </p>
         <p class="text-sm text-gray-500">
-            {% if device.online %}
-                Modus: {{ device.last_status.current_mode | default('Normal') }}
-            {% else %}
+            {% if not device.online %}
                 Letzte Aktivität: {{ device.last_seen | default('Unbekannt') }}
             {% endif %}
         </p>
@@ -116,14 +114,7 @@
                 {{ device.last_status.current_mode | default('Normal') }}
             </span>
         </div>
-        <div class="px-4 py-3 flex justify-between">
-            <span class="text-gray-600">GPIO</span>
-            <span class="font-medium" :class="status.gpio ? 'text-success' : 'text-gray-900'">
-                <span x-text="status.gpio ? 'HIGH (offen)' : 'LOW (zu)'">
-                    {% if device.last_status.gpio_state %}HIGH (offen){% else %}LOW (zu){% endif %}
-                </span>
-            </span>
-        </div>
+        
         <div class="px-4 py-3 flex justify-between">
             <span class="text-gray-600">Nächste Änderung</span>
             <span class="text-gray-900" x-text="status.next_change || '-'">
@@ -136,39 +127,23 @@
     <!-- Quick Actions -->
     <h2 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-6 mb-4">Schnellaktionen</h2>
 
-    <div class="grid grid-cols-2 gap-3">
-        <!-- Override 1h -->
-        <button @click="setOverride('always_open', 1)"
-                :disabled="!online"
-                class="bg-white rounded-xl p-4 shadow-sm border border-gray-100
-                       hover:shadow-md hover:border-gray-200 transition-smooth btn-press
-                       disabled:opacity-50 disabled:cursor-not-allowed text-left">
-            <div class="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center mb-2">
-                <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
-                </svg>
-            </div>
-            <p class="font-medium text-gray-900">Override 1h</p>
-            <p class="text-xs text-gray-500">Immer offen</p>
-        </button>
-
-        <!-- Edit Schedule -->
-        <button @click="showScheduleModal = true"
-                :disabled="!online"
-                class="bg-white rounded-xl p-4 shadow-sm border border-gray-100
-                       hover:shadow-md hover:border-gray-200 transition-smooth btn-press
-                       disabled:opacity-50 disabled:cursor-not-allowed text-left">
-            <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
-                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-            </div>
-            <p class="font-medium text-gray-900">Zeitplan</p>
-            <p class="text-xs text-gray-500">Bearbeiten</p>
-        </button>
-    </div>
+    <!-- Single Quick Action -->
+    <button @click="showScheduleModal = true"
+            :disabled="!online"
+            class="w-full bg-white rounded-xl p-4 shadow-sm border border-gray-100
+                   hover:shadow-md hover:border-gray-200 transition-smooth btn-press
+                   disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-4">
+        <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+            <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+        </div>
+        <div class="text-left">
+            <p class="font-medium text-gray-900">Zeitplan bearbeiten</p>
+            <p class="text-sm text-gray-500">Öffnungszeiten anpassen</p>
+        </div>
+    </button>
     {% endif %}
 
     <!-- Device Info -->
@@ -246,9 +221,11 @@
     </div>
 
     <!-- Test Result Display -->
-    <div x-show="testResultData" x-cloak class="mt-4 bg-gray-50 rounded-xl p-4 border border-gray-200">
-        <h4 class="font-medium text-gray-900 mb-3">Testergebnis</h4>
-        <div id="deviceTestResults" class="space-y-2 text-sm"></div>
+    <div x-show="testResultData" x-cloak class="mt-4 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
+            <h4 class="font-medium text-gray-900">Verbindungstest Ergebnis</h4>
+        </div>
+        <div id="deviceTestResults" class="divide-y divide-gray-100"></div>
     </div>
     {% endif %}
 
@@ -357,31 +334,62 @@ function deviceControl() {
                 this.testResult = data.all_tests_passed;
                 this.testResultData = data;
 
-                // Display results using DOM methods
+                // Display results using DOM methods - enhanced like diagnostics
                 if (resultsDiv && data.tests) {
+                    const testLabels = {
+                        'websocket': 'WebSocket Verbindung',
+                        'ping': 'Ping Test',
+                        'status': 'Status Abfrage',
+                        'command': 'Befehlskanal'
+                    };
+
                     for (const [testName, result] of Object.entries(data.tests)) {
                         const row = document.createElement('div');
-                        row.className = 'flex items-center justify-between p-2 rounded ' +
-                            (result.success ? 'bg-green-50' : 'bg-red-50');
+                        row.className = 'px-4 py-3 flex items-center justify-between';
 
-                        const label = document.createElement('span');
-                        label.className = result.success ? 'text-green-800' : 'text-red-800';
-                        label.textContent = testName.replace(/_/g, ' ');
+                        const leftDiv = document.createElement('div');
+                        leftDiv.className = 'flex items-center space-x-3';
 
-                        const status = document.createElement('span');
-                        status.className = 'font-medium ' + (result.success ? 'text-green-600' : 'text-red-600');
-                        status.textContent = result.success ? 'OK' : 'FEHLER';
+                        const iconDiv = document.createElement('div');
+                        iconDiv.className = 'w-8 h-8 rounded-lg flex items-center justify-center ' +
+                            (result.success ? 'bg-green-100' : 'bg-red-100');
+                        iconDiv.innerHTML = result.success
+                            ? '<svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>'
+                            : '<svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>';
 
-                        row.appendChild(label);
-                        row.appendChild(status);
+                        const textDiv = document.createElement('div');
+                        const label = document.createElement('p');
+                        label.className = 'font-medium text-gray-900 text-sm';
+                        label.textContent = testLabels[testName] || testName.replace(/_/g, ' ');
+                        textDiv.appendChild(label);
+
+                        // Add latency for ping test
+                        if (testName === 'ping' && result.latency_ms) {
+                            const latency = document.createElement('p');
+                            latency.className = 'text-xs text-gray-500';
+                            latency.textContent = 'Latenz: ' + result.latency_ms + ' ms';
+                            textDiv.appendChild(latency);
+                        }
+
+                        // Add error message if failed
+                        if (!result.success && result.error) {
+                            const error = document.createElement('p');
+                            error.className = 'text-xs text-red-500';
+                            error.textContent = result.error;
+                            textDiv.appendChild(error);
+                        }
+
+                        leftDiv.appendChild(iconDiv);
+                        leftDiv.appendChild(textDiv);
+
+                        const statusBadge = document.createElement('span');
+                        statusBadge.className = 'px-2 py-1 text-xs font-medium rounded-full ' +
+                            (result.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700');
+                        statusBadge.textContent = result.success ? 'OK' : 'Fehler';
+
+                        row.appendChild(leftDiv);
+                        row.appendChild(statusBadge);
                         resultsDiv.appendChild(row);
-                    }
-
-                    if (data.tests.ping && data.tests.ping.latency_ms) {
-                        const latencyRow = document.createElement('div');
-                        latencyRow.className = 'text-xs text-gray-500 mt-2';
-                        latencyRow.textContent = 'Latenz: ' + data.tests.ping.latency_ms + 'ms';
-                        resultsDiv.appendChild(latencyRow);
                     }
                 }
             } catch (e) {
