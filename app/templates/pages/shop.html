@@ -639,122 +639,125 @@
                     {% set is_always_open = device.last_status.override_active and device.last_status.override_mode == 'always_open' %}
                     {% set is_blocked = device.last_status.override_active and device.last_status.override_mode == 'access_blocked' %}
                     {% set is_normal = not device.last_status.override_active %}
-                    <div class="space-y-2">
-                        <!-- Top row: 3 buttons -->
-                        <div class="grid grid-cols-3 gap-2">
-                            <!-- Kurzzeitig öffnen Button (Pulse) -->
+                    <div class="space-y-3">
+                        <!-- Row 1: Kurzzeitig öffnen + Normalbetrieb -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <!-- Kurzzeitig öffnen Button -->
                             <button @click="openDoor('{{ device.device_id }}')"
                                     :disabled="loading['{{ device.device_id }}_open']"
-                                    class="py-3 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-xl
-                                           disabled:opacity-50 transition-smooth flex items-center justify-center space-x-1">
+                                    class="py-4 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-xl
+                                           disabled:opacity-50 transition-smooth flex flex-col items-center justify-center gap-1">
                                 <template x-if="loading['{{ device.device_id }}_open']">
-                                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                    <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                                     </svg>
                                 </template>
                                 <template x-if="success['{{ device.device_id }}_open']">
-                                    <span>OK</span>
+                                    <span class="text-lg">✓</span>
                                 </template>
                                 <template x-if="!loading['{{ device.device_id }}_open'] && !success['{{ device.device_id }}_open']">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
                                     </svg>
                                 </template>
-                                <span x-show="!loading['{{ device.device_id }}_open'] && !success['{{ device.device_id }}_open']" class="text-xs">Kurz</span>
+                                <span x-show="!loading['{{ device.device_id }}_open'] && !success['{{ device.device_id }}_open']" class="text-sm">Kurzzeitig öffnen</span>
                             </button>
+
                             <!-- Normalbetrieb Button -->
                             <button @click="clearOverride('{{ device.device_id }}')"
                                     :disabled="loading['{{ device.device_id }}_clear']"
-                                    class="py-3 text-white font-medium rounded-xl
-                                           disabled:opacity-50 transition-smooth flex items-center justify-center space-x-1
-                                           {% if is_normal %}bg-blue-600 border-4 border-blue-400{% else %}bg-gray-600 hover:bg-gray-700{% endif %}">
+                                    class="py-4 text-white font-medium rounded-xl
+                                           disabled:opacity-50 transition-smooth flex flex-col items-center justify-center gap-1
+                                           {% if is_normal %}bg-blue-600 ring-4 ring-blue-300{% else %}bg-gray-600 hover:bg-gray-700{% endif %}">
                                 <template x-if="loading['{{ device.device_id }}_clear']">
-                                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                    <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                                     </svg>
                                 </template>
                                 <template x-if="success['{{ device.device_id }}_clear']">
-                                    <span>OK</span>
+                                    <span class="text-lg">✓</span>
                                 </template>
                                 <template x-if="!loading['{{ device.device_id }}_clear'] && !success['{{ device.device_id }}_clear']">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                     </svg>
                                 </template>
-                                <span x-show="!loading['{{ device.device_id }}_clear'] && !success['{{ device.device_id }}_clear']" class="text-xs">Normal</span>
+                                <span x-show="!loading['{{ device.device_id }}_clear'] && !success['{{ device.device_id }}_clear']" class="text-sm">Normalbetrieb</span>
                             </button>
-                            <!-- Dauerhaft öffnen Button -->
+                        </div>
+
+                        <!-- Row 2: Dauergeöffnet + Dauergeschlossen -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <!-- Dauergeöffnet Button -->
                             <button @click="setOverride('{{ device.device_id }}', 'always_open')"
                                     :disabled="loading['{{ device.device_id }}_override']"
-                                    class="py-3 text-white font-medium rounded-xl
-                                           disabled:opacity-50 transition-smooth flex items-center justify-center space-x-1
-                                           {% if is_always_open %}bg-green-600 border-4 border-green-400{% else %}bg-gray-600 hover:bg-gray-700{% endif %}">
+                                    class="py-4 text-white font-medium rounded-xl
+                                           disabled:opacity-50 transition-smooth flex flex-col items-center justify-center gap-1
+                                           {% if is_always_open %}bg-green-600 ring-4 ring-green-300{% else %}bg-gray-600 hover:bg-gray-700{% endif %}">
                                 <template x-if="loading['{{ device.device_id }}_override']">
-                                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                    <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                                     </svg>
                                 </template>
                                 <template x-if="success['{{ device.device_id }}_override']">
-                                    <span>OK</span>
+                                    <span class="text-lg">✓</span>
                                 </template>
                                 <template x-if="!loading['{{ device.device_id }}_override'] && !success['{{ device.device_id }}_override']">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                     </svg>
                                 </template>
-                                <span x-show="!loading['{{ device.device_id }}_override'] && !success['{{ device.device_id }}_override']" class="text-xs">Dauer-Auf</span>
+                                <span x-show="!loading['{{ device.device_id }}_override'] && !success['{{ device.device_id }}_override']" class="text-sm">Dauergeöffnet</span>
                             </button>
-                        </div>
-                        <!-- Bottom row: 2 buttons -->
-                        <div class="grid grid-cols-2 gap-2">
+
                             <!-- Dauergeschlossen Button -->
                             <button @click="setOverride('{{ device.device_id }}', 'access_blocked')"
                                     :disabled="loading['{{ device.device_id }}_blocked']"
-                                    class="py-3 text-white font-medium rounded-xl
-                                           disabled:opacity-50 transition-smooth flex items-center justify-center space-x-1
-                                           {% if is_blocked %}bg-red-600 border-4 border-red-400{% else %}bg-gray-600 hover:bg-gray-700{% endif %}">
+                                    class="py-4 text-white font-medium rounded-xl
+                                           disabled:opacity-50 transition-smooth flex flex-col items-center justify-center gap-1
+                                           {% if is_blocked %}bg-red-600 ring-4 ring-red-300{% else %}bg-gray-600 hover:bg-gray-700{% endif %}">
                                 <template x-if="loading['{{ device.device_id }}_blocked']">
-                                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                    <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                                     </svg>
                                 </template>
                                 <template x-if="success['{{ device.device_id }}_blocked']">
-                                    <span>OK</span>
+                                    <span class="text-lg">✓</span>
                                 </template>
                                 <template x-if="!loading['{{ device.device_id }}_blocked'] && !success['{{ device.device_id }}_blocked']">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
                                     </svg>
                                 </template>
-                                <span x-show="!loading['{{ device.device_id }}_blocked'] && !success['{{ device.device_id }}_blocked']" class="text-xs">Dauer-Zu</span>
-                            </button>
-                            <!-- Schließen Button -->
-                            <button @click="closeDoor('{{ device.device_id }}')"
-                                    :disabled="loading['{{ device.device_id }}_close']"
-                                    class="py-3 text-white font-medium rounded-xl
-                                           disabled:opacity-50 transition-smooth flex items-center justify-center space-x-1
-                                           bg-gray-600 hover:bg-gray-700">
-                                <template x-if="loading['{{ device.device_id }}_close']">
-                                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                                    </svg>
-                                </template>
-                                <template x-if="success['{{ device.device_id }}_close']">
-                                    <span>OK</span>
-                                </template>
-                                <template x-if="!loading['{{ device.device_id }}_close'] && !success['{{ device.device_id }}_close']">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                                    </svg>
-                                </template>
-                                <span x-show="!loading['{{ device.device_id }}_close'] && !success['{{ device.device_id }}_close']" class="text-xs">Schließen</span>
+                                <span x-show="!loading['{{ device.device_id }}_blocked'] && !success['{{ device.device_id }}_blocked']" class="text-sm">Dauergeschlossen</span>
                             </button>
                         </div>
+
+                        <!-- Row 3: Tür schließen (full width, subtle) -->
+                        <button @click="closeDoor('{{ device.device_id }}')"
+                                :disabled="loading['{{ device.device_id }}_close']"
+                                class="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl
+                                       disabled:opacity-50 transition-smooth flex items-center justify-center gap-2 border border-gray-200">
+                            <template x-if="loading['{{ device.device_id }}_close']">
+                                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                </svg>
+                            </template>
+                            <template x-if="success['{{ device.device_id }}_close']">
+                                <span>✓ Geschlossen</span>
+                            </template>
+                            <template x-if="!loading['{{ device.device_id }}_close'] && !success['{{ device.device_id }}_close']">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                </svg>
+                            </template>
+                            <span x-show="!loading['{{ device.device_id }}_close'] && !success['{{ device.device_id }}_close']" class="text-sm">Tür schließen (Normalbetrieb)</span>
+                        </button>
                     </div>
                     {% else %}
                     <button disabled class="w-full py-3 bg-gray-100 text-gray-400 font-medium rounded-xl cursor-not-allowed">
