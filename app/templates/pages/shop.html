@@ -35,22 +35,22 @@
     <!-- Tab Navigation -->
     <div class="sticky top-14 z-40 bg-white border-b border-gray-200">
         <div class="px-4 flex space-x-1">
-            <button @click="activeTab = 'dashboard'"
+            <button @click="activeTab = 'dashboard'; window.location.hash = 'dashboard'"
                     :class="activeTab === 'dashboard' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'"
                     class="px-4 py-3 text-sm font-medium transition-smooth">
                 Dashboard
             </button>
-            <button @click="activeTab = 'ueberwachung'"
+            <button @click="activeTab = 'ueberwachung'; window.location.hash = 'ueberwachung'"
                     :class="activeTab === 'ueberwachung' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'"
                     class="px-4 py-3 text-sm font-medium transition-smooth">
                 Überwachung
             </button>
-            <button @click="activeTab = 'service'"
+            <button @click="activeTab = 'service'; window.location.hash = 'service'"
                     :class="activeTab === 'service' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'"
                     class="px-4 py-3 text-sm font-medium transition-smooth">
                 Service
             </button>
-            <button @click="activeTab = 'geraete'"
+            <button @click="activeTab = 'geraete'; window.location.hash = 'geraete'"
                     :class="activeTab === 'geraete' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'"
                     class="px-4 py-3 text-sm font-medium transition-smooth">
                 Geräte
@@ -72,17 +72,27 @@
             <div class="flex items-center justify-between px-4 py-4">
                 <span class="text-gray-900">{{ device.name or device.device_id }}</span>
                 <span class="px-3 py-1 text-sm rounded-lg border
-                            {% if device.online and device.last_status.gpio_state %}
-                            bg-green-50 text-green-700 border-green-200
-                            {% elif device.online %}
-                            bg-gray-50 text-gray-600 border-gray-200
-                            {% else %}
+                            {% if not device.online %}
                             bg-red-50 text-red-600 border-red-200
+                            {% elif device.last_status.override_active and device.last_status.override_mode == 'access_blocked' %}
+                            bg-red-100 text-red-800 border-red-300
+                            {% elif device.last_status.override_active and device.last_status.override_mode == 'always_open' %}
+                            bg-green-100 text-green-800 border-green-300
+                            {% elif device.last_status.gpio_state %}
+                            bg-green-50 text-green-700 border-green-200
+                            {% else %}
+                            bg-gray-50 text-gray-600 border-gray-200
                             {% endif %}">
-                    {% if device.online %}
-                        {% if device.last_status.gpio_state %}Offen{% else %}Geschlossen{% endif %}
-                    {% else %}
+                    {% if not device.online %}
                         Offline
+                    {% elif device.last_status.override_active and device.last_status.override_mode == 'access_blocked' %}
+                        Dauergeschlossen
+                    {% elif device.last_status.override_active and device.last_status.override_mode == 'always_open' %}
+                        Daueroffen
+                    {% elif device.last_status.gpio_state %}
+                        Offen
+                    {% else %}
+                        Geschlossen
                     {% endif %}
                 </span>
             </div>
@@ -589,8 +599,20 @@
                                 <h3 class="font-semibold text-gray-900">{{ device.name or device.device_id }}</h3>
                                 <p class="text-xs text-gray-500">
                                     {% if device.online %}
-                                        {% if device.last_status.gpio_state %}Offen{% else %}Geschlossen{% endif %}
-                                        · {{ device.last_status.current_mode | default('Normal') }}
+                                        {% if device.last_status.override_active and device.last_status.override_mode == 'access_blocked' %}
+                                            <span class="text-red-600 font-medium">Dauergeschlossen</span>
+                                        {% elif device.last_status.override_active and device.last_status.override_mode == 'always_open' %}
+                                            <span class="text-green-600 font-medium">Daueroffen</span>
+                                        {% elif device.last_status.gpio_state %}
+                                            <span class="text-green-600 font-medium">Offen</span>
+                                        {% else %}
+                                            <span class="text-gray-600">Geschlossen</span>
+                                        {% endif %}
+                                        {% if device.last_status.override_active %}
+                                            · <span class="text-orange-500">Override aktiv</span>
+                                        {% else %}
+                                            · {{ device.last_status.current_mode | replace('access_blocked', 'Gesperrt') | replace('always_open', 'Dauerauf') | replace('normal_operation', 'Normal') | default('Normal') }}
+                                        {% endif %}
                                     {% else %}
                                         Offline
                                     {% endif %}
@@ -607,23 +629,98 @@
                 {% if can_control %}
                 <div class="px-4 pb-4">
                     {% if device.online %}
-                    <button @click="openDoor('{{ device.device_id }}')"
-                            :disabled="loading['{{ device.device_id }}']"
-                            class="w-full py-3 bg-primary hover:bg-primary-hover text-white font-medium rounded-xl
-                                   disabled:opacity-50 transition-smooth flex items-center justify-center space-x-2">
-                        <template x-if="loading['{{ device.device_id }}']">
-                            <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                            </svg>
-                        </template>
-                        <template x-if="success['{{ device.device_id }}']">
-                            <span>✓ Erfolgreich</span>
-                        </template>
-                        <template x-if="!loading['{{ device.device_id }}'] && !success['{{ device.device_id }}']">
-                            <span>Tür öffnen</span>
-                        </template>
-                    </button>
+                    {% set is_always_open = device.last_status.override_active and device.last_status.override_mode == 'always_open' %}
+                    {% set is_blocked = device.last_status.override_active and device.last_status.override_mode == 'access_blocked' %}
+                    {% set is_normal_closed = not device.last_status.override_active and not device.last_status.gpio_state %}
+                    <div class="grid grid-cols-2 gap-2">
+                        <!-- Kurzzeitig öffnen Button (Pulse) -->
+                        <button @click="openDoor('{{ device.device_id }}')"
+                                :disabled="loading['{{ device.device_id }}_open']"
+                                class="py-3 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-xl
+                                       disabled:opacity-50 transition-smooth flex items-center justify-center space-x-2">
+                            <template x-if="loading['{{ device.device_id }}_open']">
+                                <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                </svg>
+                            </template>
+                            <template x-if="success['{{ device.device_id }}_open']">
+                                <span>OK</span>
+                            </template>
+                            <template x-if="!loading['{{ device.device_id }}_open'] && !success['{{ device.device_id }}_open']">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+                                </svg>
+                            </template>
+                            <span x-show="!loading['{{ device.device_id }}_open'] && !success['{{ device.device_id }}_open']" class="text-sm">Kurz öffnen</span>
+                        </button>
+                        <!-- Dauerhaft öffnen Button -->
+                        <button @click="setOverride('{{ device.device_id }}', 'always_open')"
+                                :disabled="loading['{{ device.device_id }}_override']"
+                                class="py-3 text-white font-medium rounded-xl
+                                       disabled:opacity-50 transition-smooth flex items-center justify-center space-x-2
+                                       {% if is_always_open %}bg-green-600 border-4 border-green-400{% else %}bg-gray-600 hover:bg-gray-700{% endif %}">
+                            <template x-if="loading['{{ device.device_id }}_override']">
+                                <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                </svg>
+                            </template>
+                            <template x-if="success['{{ device.device_id }}_override']">
+                                <span>OK</span>
+                            </template>
+                            <template x-if="!loading['{{ device.device_id }}_override'] && !success['{{ device.device_id }}_override']">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </template>
+                            <span x-show="!loading['{{ device.device_id }}_override'] && !success['{{ device.device_id }}_override']" class="text-sm">Dauer-Auf</span>
+                        </button>
+                        <!-- Dauergeschlossen Button -->
+                        <button @click="setOverride('{{ device.device_id }}', 'access_blocked')"
+                                :disabled="loading['{{ device.device_id }}_blocked']"
+                                class="py-3 text-white font-medium rounded-xl
+                                       disabled:opacity-50 transition-smooth flex items-center justify-center space-x-2
+                                       {% if is_blocked %}bg-red-600 border-4 border-red-400{% else %}bg-gray-600 hover:bg-gray-700{% endif %}">
+                            <template x-if="loading['{{ device.device_id }}_blocked']">
+                                <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                </svg>
+                            </template>
+                            <template x-if="success['{{ device.device_id }}_blocked']">
+                                <span>OK</span>
+                            </template>
+                            <template x-if="!loading['{{ device.device_id }}_blocked'] && !success['{{ device.device_id }}_blocked']">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                                </svg>
+                            </template>
+                            <span x-show="!loading['{{ device.device_id }}_blocked'] && !success['{{ device.device_id }}_blocked']" class="text-xs">Dauergeschl.</span>
+                        </button>
+                        <!-- Schließen Button -->
+                        <button @click="closeDoor('{{ device.device_id }}')"
+                                :disabled="loading['{{ device.device_id }}_close']"
+                                class="py-3 text-white font-medium rounded-xl
+                                       disabled:opacity-50 transition-smooth flex items-center justify-center space-x-2
+                                       {% if is_normal_closed %}bg-blue-600 border-4 border-blue-400{% else %}bg-gray-600 hover:bg-gray-700{% endif %}">
+                            <template x-if="loading['{{ device.device_id }}_close']">
+                                <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                </svg>
+                            </template>
+                            <template x-if="success['{{ device.device_id }}_close']">
+                                <span>OK</span>
+                            </template>
+                            <template x-if="!loading['{{ device.device_id }}_close'] && !success['{{ device.device_id }}_close']">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                </svg>
+                            </template>
+                            <span x-show="!loading['{{ device.device_id }}_close'] && !success['{{ device.device_id }}_close']" class="text-sm">Schließen</span>
+                        </button>
+                    </div>
                     {% else %}
                     <button disabled class="w-full py-3 bg-gray-100 text-gray-400 font-medium rounded-xl cursor-not-allowed">
                         Gerät offline
@@ -693,8 +790,13 @@
 
 <script>
 function shopDashboard() {
+    // Read tab from URL hash, default to 'dashboard'
+    const validTabs = ['dashboard', 'ueberwachung', 'service', 'geraete'];
+    const hashTab = window.location.hash.replace('#', '');
+    const initialTab = validTabs.includes(hashTab) ? hashTab : 'dashboard';
+
     return {
-        activeTab: 'dashboard',
+        activeTab: initialTab,
         loading: {},
         success: {},
         showAddDevice: false,
@@ -791,23 +893,104 @@ function shopDashboard() {
         },
 
         async openDoor(deviceId) {
-            this.loading[deviceId] = true;
-            this.success[deviceId] = false;
+            const key = `${deviceId}_open`;
+            this.loading[key] = true;
+            this.success[key] = false;
 
             try {
                 const response = await fetch(`/api/commands/${deviceId}/open`, { method: 'POST' });
                 const data = await response.json();
 
                 if (data.success) {
-                    this.success[deviceId] = true;
-                    setTimeout(() => { this.success[deviceId] = false; }, 2000);
+                    this.success[key] = true;
+                    // Set hash to geraete and reload to show updated status
+                    setTimeout(() => {
+                        window.location.hash = 'geraete';
+                        window.location.reload();
+                    }, 1500);
                 } else {
                     alert(data.error || 'Fehler beim Öffnen');
                 }
             } catch (e) {
                 alert('Verbindungsfehler');
             } finally {
-                this.loading[deviceId] = false;
+                this.loading[key] = false;
+            }
+        },
+
+        async closeDoor(deviceId) {
+            const key = `${deviceId}_close`;
+            this.loading[key] = true;
+            this.success[key] = false;
+
+            try {
+                const response = await fetch(`/api/commands/${deviceId}/close`, { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    this.success[key] = true;
+                    // Set hash to geraete and reload to show updated status
+                    setTimeout(() => {
+                        window.location.hash = 'geraete';
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    alert(data.error || 'Fehler beim Schließen');
+                }
+            } catch (e) {
+                alert('Verbindungsfehler');
+            } finally {
+                this.loading[key] = false;
+            }
+        },
+
+        async setOverride(deviceId, mode) {
+            // Use different keys for always_open vs access_blocked
+            const key = mode === 'access_blocked' ? `${deviceId}_blocked` : `${deviceId}_override`;
+            this.loading[key] = true;
+            this.success[key] = false;
+
+            try {
+                // 24 hours duration for permanent override
+                const response = await fetch(`/api/commands/${deviceId}/override?mode=${mode}&duration_hours=24`, { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    this.success[key] = true;
+                    // Set hash to geraete and reload to show updated status
+                    setTimeout(() => {
+                        window.location.hash = 'geraete';
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    alert(data.error || 'Fehler beim Setzen des Override');
+                }
+            } catch (e) {
+                alert('Verbindungsfehler');
+            } finally {
+                this.loading[key] = false;
+            }
+        },
+
+        async clearOverride(deviceId) {
+            const key = `${deviceId}_clear`;
+            this.loading[key] = true;
+            this.success[key] = false;
+
+            try {
+                const response = await fetch(`/api/commands/${deviceId}/override`, { method: 'DELETE' });
+                const data = await response.json();
+
+                if (data.success) {
+                    this.success[key] = true;
+                    setTimeout(() => { this.success[key] = false; }, 2000);
+                } else {
+                    alert(data.error || 'Fehler beim Aufheben des Override');
+                }
+            } catch (e) {
+                alert('Verbindungsfehler');
+            } finally {
+                this.loading[key] = false;
             }
         },
 

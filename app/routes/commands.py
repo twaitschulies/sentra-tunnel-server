@@ -151,6 +151,17 @@ async def open_door(
     return await execute_command(request, device_id, command, user)
 
 
+@router.post("/{device_id}/close")
+async def close_door(
+    request: Request,
+    device_id: str,
+    user: dict = Depends(require_auth)
+):
+    """Close the door (set GPIO LOW)."""
+    command = CommandRequest(action="close_door")
+    return await execute_command(request, device_id, command, user)
+
+
 @router.get("/{device_id}/config")
 async def get_door_config(
     request: Request,

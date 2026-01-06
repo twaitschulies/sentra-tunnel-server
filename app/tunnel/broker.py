@@ -258,6 +258,40 @@ class TunnelBroker:
 
         pending = self._pending_commands.pop(command_id)
 
+        # Update last_status based on command action and response
+        if message.get('success') and pending.device_id in self._connections:
+            conn = self._connections[pending.device_id]
+            action = pending.action
+            data = message.get('data', {})
+
+            # Update gpio_state based on action
+            if action == 'open_door':
+                conn.last_status['gpio_state'] = True
+                logger.info(f"Updated gpio_state=True for {pending.device_id} after open_door")
+            elif action == 'close_door':
+                conn.last_status['gpio_state'] = False
+                logger.info(f"Updated gpio_state=False for {pending.device_id} after close_door")
+            elif action == 'set_override':
+                # Override sets mode - always_open or access_blocked
+                mode = pending.params.get('mode', 'always_open')
+                conn.last_status['gpio_state'] = (mode == 'always_open')
+                conn.last_status['override_active'] = True
+                conn.last_status['override_mode'] = mode
+                conn.last_status['current_mode'] = mode  # Also update current_mode
+                logger.info(f"Updated status for {pending.device_id} after set_override: mode={mode}, gpio={mode == 'always_open'}")
+            elif action == 'clear_override':
+                # Override cleared, return to normal (closed by default)
+                conn.last_status['gpio_state'] = False
+                conn.last_status['override_active'] = False
+                conn.last_status['override_mode'] = None
+                conn.last_status['current_mode'] = 'normal_operation'
+                logger.info(f"Updated status for {pending.device_id} after clear_override")
+            elif action == 'get_status':
+                # Full status response - merge all data
+                if data:
+                    conn.last_status.update(data)
+                    logger.info(f"Updated full status for {pending.device_id}")
+
         if pending.future and not pending.future.done():
             pending.future.set_result({
                 'success': message.get('success', False),

@@ -1,0 +1,477 @@
+{% extends "base.html" %}
+
+{% block title %}Diagnostics - Sentra Tunnel{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <a href="/admin" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </a>
+                <h1 class="text-xl font-semibold text-gray-900">System Diagnostics</h1>
+            </div>
+            <button onclick="window.location.reload()"
+                    class="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span>Aktualisieren</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+        <!-- Status Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Server Status -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-gray-900">Server</h3>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                {% if diagnostics.server.status == 'running' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                        {{ diagnostics.server.status }}
+                    </span>
+                </div>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Version</span>
+                        <span class="font-mono">{{ diagnostics.server.version }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Server Time</span>
+                        <span class="font-mono text-xs">{{ diagnostics.server.time }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Broker Status -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-gray-900">Tunnel Broker</h3>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                {% if diagnostics.broker.status == 'running' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                        {{ diagnostics.broker.status }}
+                    </span>
+                </div>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Connected Devices</span>
+                        <span class="font-semibold text-green-600">{{ diagnostics.broker.connected_devices | default(0) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Pending Commands</span>
+                        <span class="font-mono">{{ diagnostics.broker.pending_commands | default(0) }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Database Status -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-gray-900">Database</h3>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                {% if diagnostics.database.status == 'connected' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                        {{ diagnostics.database.status }}
+                    </span>
+                </div>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Shops</span>
+                        <span>{{ diagnostics.database.shops | default(0) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Devices</span>
+                        <span>{{ diagnostics.database.devices | default(0) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Users</span>
+                        <span>{{ diagnostics.database.users | default(0) }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Device Status -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">Device Status</h2>
+                <span class="text-sm text-gray-500">{{ diagnostics.devices | length }} device(s)</span>
+            </div>
+            <div class="overflow-x-auto">
+                {% if diagnostics.devices %}
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Device ID</th>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Name</th>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Shop</th>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Status</th>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Last Heartbeat</th>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for device in diagnostics.devices %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-mono text-xs">{{ device.device_id }}</td>
+                            <td class="px-6 py-4">{{ device.name | default('-') }}</td>
+                            <td class="px-6 py-4">{{ device.shop_name | default(device.shop_id) | default('-') }}</td>
+                            <td class="px-6 py-4">
+                                {% if device.online %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <span class="w-2 h-2 bg-green-500 rounded-full mr-1.5 animate-pulse"></span>
+                                    Online
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                    Offline
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-gray-500 text-xs">
+                                {{ device.last_heartbeat | default(device.last_seen) | default('-') }}
+                            </td>
+                            <td class="px-6 py-4">
+                                <button onclick="testDevice('{{ device.device_id }}')"
+                                        class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                    Test
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="p-12 text-center text-gray-500">
+                    No devices registered
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- Pending Registration Tokens -->
+        {% if diagnostics.pending_tokens %}
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-yellow-50 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">Pending Registration Tokens</h2>
+                <span class="text-sm text-yellow-700">{{ diagnostics.pending_tokens | length }} pending</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Device Name</th>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Shop</th>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Token</th>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Expires</th>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for token in diagnostics.pending_tokens %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-medium">{{ token.device_name }}</td>
+                            <td class="px-6 py-4">{{ token.shop_id }}</td>
+                            <td class="px-6 py-4 font-mono text-xs truncate max-w-xs">{{ token.token }}</td>
+                            <td class="px-6 py-4 text-xs">{{ token.expires_at }}</td>
+                            <td class="px-6 py-4">
+                                {% if token.expired %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    Expired
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    {{ token.expires_in }}
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- Recent Errors -->
+        {% if diagnostics.recent_errors %}
+        <section class="bg-white rounded-xl shadow-sm border border-red-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-red-200 bg-red-50 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-red-900">Recent Errors</h2>
+                <span class="text-sm text-red-700">{{ diagnostics.recent_errors | length }} error(s)</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Timestamp</th>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Action</th>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Device</th>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Details</th>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Result</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for error in diagnostics.recent_errors %}
+                        <tr class="hover:bg-red-50">
+                            <td class="px-6 py-4 text-xs font-mono">{{ error.timestamp }}</td>
+                            <td class="px-6 py-4 font-medium">{{ error.action }}</td>
+                            <td class="px-6 py-4 font-mono text-xs">{{ error.device_id | default('-') }}</td>
+                            <td class="px-6 py-4 text-gray-600 max-w-xs truncate">{{ error.details | default('-') }}</td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    {{ error.result }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- Audit Log -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">Audit Log (Last 50)</h2>
+            </div>
+            <div class="overflow-x-auto max-h-96 overflow-y-auto">
+                {% if diagnostics.audit_log %}
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 border-b border-gray-200 sticky top-0">
+                        <tr>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Timestamp</th>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Action</th>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">User</th>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Device</th>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Details</th>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">Result</th>
+                            <th class="text-left px-6 py-3 text-gray-500 font-medium">IP</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for log in diagnostics.audit_log %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-3 text-xs font-mono whitespace-nowrap">{{ log.timestamp }}</td>
+                            <td class="px-6 py-3 font-medium whitespace-nowrap">{{ log.action }}</td>
+                            <td class="px-6 py-3">{{ log.user_id | default('-') }}</td>
+                            <td class="px-6 py-3 font-mono text-xs">{{ log.device_id | default('-') }}</td>
+                            <td class="px-6 py-3 text-gray-600 max-w-xs truncate">{{ log.details | default('-') }}</td>
+                            <td class="px-6 py-3">
+                                {% if log.result %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                                            {% if 'success' in log.result %}bg-green-100 text-green-800
+                                            {% elif 'error' in log.result or 'fail' in log.result %}bg-red-100 text-red-800
+                                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ log.result }}
+                                </span>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-3 font-mono text-xs">{{ log.ip_address | default('-') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="p-12 text-center text-gray-500">
+                    No audit log entries
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<!-- Test Result Modal -->
+<div id="testModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50" onclick="closeTestModal()"></div>
+    <div class="absolute inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div class="p-6 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">Device Test Results</h3>
+            <button onclick="closeTestModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div id="testResults" class="p-6 max-h-96 overflow-y-auto">
+            <div id="testLoading" class="flex items-center justify-center py-8">
+                <svg class="animate-spin h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+                <span class="ml-3 text-gray-600">Running tests...</span>
+            </div>
+            <div id="testContent" class="hidden space-y-4"></div>
+            <div id="testError" class="hidden p-4 bg-red-50 rounded-lg text-red-800"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function testDevice(deviceId) {
+    const modal = document.getElementById('testModal');
+    const loading = document.getElementById('testLoading');
+    const content = document.getElementById('testContent');
+    const errorDiv = document.getElementById('testError');
+
+    modal.classList.remove('hidden');
+    loading.classList.remove('hidden');
+    content.classList.add('hidden');
+    errorDiv.classList.add('hidden');
+
+    // Clear previous content safely
+    while (content.firstChild) {
+        content.removeChild(content.firstChild);
+    }
+
+    try {
+        const response = await fetch('/api/devices/' + encodeURIComponent(deviceId) + '/test', {
+            method: 'POST'
+        });
+        const data = await response.json();
+
+        loading.classList.add('hidden');
+        content.classList.remove('hidden');
+
+        // Build header section using DOM methods
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'flex items-center justify-between p-4 bg-gray-50 rounded-lg';
+
+        const headerInfo = document.createElement('div');
+        const deviceName = document.createElement('h4');
+        deviceName.className = 'font-semibold';
+        deviceName.textContent = data.device_name || data.device_id;
+        const deviceIdEl = document.createElement('p');
+        deviceIdEl.className = 'text-sm text-gray-500';
+        deviceIdEl.textContent = data.device_id;
+        headerInfo.appendChild(deviceName);
+        headerInfo.appendChild(deviceIdEl);
+
+        const statusBadge = document.createElement('span');
+        statusBadge.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ' +
+            (data.all_tests_passed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800');
+        statusBadge.textContent = data.all_tests_passed ? 'All Tests Passed' : 'Some Tests Failed';
+
+        headerDiv.appendChild(headerInfo);
+        headerDiv.appendChild(statusBadge);
+        content.appendChild(headerDiv);
+
+        // Build test results using DOM methods
+        if (data.tests) {
+            for (const [testName, result] of Object.entries(data.tests)) {
+                const testDiv = document.createElement('div');
+                testDiv.className = 'flex items-start space-x-3 p-3 border rounded-lg ' +
+                    (result.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50');
+
+                const iconDiv = document.createElement('div');
+                iconDiv.className = 'flex-shrink-0';
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('class', 'w-5 h-5 ' + (result.success ? 'text-green-600' : 'text-red-600'));
+                svg.setAttribute('fill', 'none');
+                svg.setAttribute('stroke', 'currentColor');
+                svg.setAttribute('viewBox', '0 0 24 24');
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('stroke-linecap', 'round');
+                path.setAttribute('stroke-linejoin', 'round');
+                path.setAttribute('stroke-width', '2');
+                path.setAttribute('d', result.success ? 'M5 13l4 4L19 7' : 'M6 18L18 6M6 6l12 12');
+                svg.appendChild(path);
+                iconDiv.appendChild(svg);
+
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'flex-1';
+                const testTitle = document.createElement('h5');
+                testTitle.className = 'font-medium ' + (result.success ? 'text-green-800' : 'text-red-800');
+                testTitle.textContent = testName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                infoDiv.appendChild(testTitle);
+
+                if (result.message) {
+                    const testMsg = document.createElement('p');
+                    testMsg.className = 'text-sm ' + (result.success ? 'text-green-700' : 'text-red-700');
+                    testMsg.textContent = result.message;
+                    infoDiv.appendChild(testMsg);
+                }
+
+                if (result.latency_ms) {
+                    const latency = document.createElement('p');
+                    latency.className = 'text-xs text-gray-500 mt-1';
+                    latency.textContent = 'Latency: ' + result.latency_ms + 'ms';
+                    infoDiv.appendChild(latency);
+                }
+
+                testDiv.appendChild(iconDiv);
+                testDiv.appendChild(infoDiv);
+                content.appendChild(testDiv);
+            }
+        }
+
+        // Build connection info using DOM methods
+        if (data.connection) {
+            const connDiv = document.createElement('div');
+            connDiv.className = 'mt-4 p-4 bg-blue-50 rounded-lg';
+
+            const connTitle = document.createElement('h5');
+            connTitle.className = 'font-medium text-blue-800 mb-2';
+            connTitle.textContent = 'Connection Details';
+            connDiv.appendChild(connTitle);
+
+            const grid = document.createElement('div');
+            grid.className = 'grid grid-cols-2 gap-2 text-sm';
+
+            const fields = [
+                ['Session ID', data.connection.session_id || '-'],
+                ['Connected At', data.connection.connected_at || '-'],
+                ['Last Heartbeat', data.connection.last_heartbeat || '-']
+            ];
+
+            fields.forEach(([label, value]) => {
+                const labelEl = document.createElement('div');
+                labelEl.className = 'text-blue-600';
+                labelEl.textContent = label + ':';
+                const valueEl = document.createElement('div');
+                valueEl.className = 'font-mono text-xs';
+                valueEl.textContent = value;
+                grid.appendChild(labelEl);
+                grid.appendChild(valueEl);
+            });
+
+            connDiv.appendChild(grid);
+            content.appendChild(connDiv);
+        }
+
+    } catch (e) {
+        loading.classList.add('hidden');
+        errorDiv.classList.remove('hidden');
+
+        const errorTitle = document.createElement('h4');
+        errorTitle.className = 'font-semibold';
+        errorTitle.textContent = 'Test Failed';
+        const errorMsg = document.createElement('p');
+        errorMsg.className = 'text-sm mt-1';
+        errorMsg.textContent = e.message;
+
+        while (errorDiv.firstChild) {
+            errorDiv.removeChild(errorDiv.firstChild);
+        }
+        errorDiv.appendChild(errorTitle);
+        errorDiv.appendChild(errorMsg);
+    }
+}
+
+function closeTestModal() {
+    document.getElementById('testModal').classList.add('hidden');
+}
+</script>
+{% endblock %}
