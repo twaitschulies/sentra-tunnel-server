@@ -30,7 +30,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" x-data="shopDashboard()" x-init="if(activeTab === 'feiertage') loadSpecialDays()">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" x-data="shopDashboard()" x-init="initAutoRefresh(); if(activeTab === 'feiertage') loadSpecialDays()">
 
     <!-- Tab Navigation -->
     <div class="sticky top-14 z-40 bg-white border-b border-gray-200">
@@ -605,24 +605,18 @@
                             <div>
                                 <h3 class="font-semibold text-gray-900">{{ device.name or device.device_id }}</h3>
                                 <p class="text-xs text-gray-500">
-                                    {% if device.online %}
-                                        {% if device.last_status.override_active and device.last_status.override_mode == 'access_blocked' %}
-                                            <span class="text-red-600 font-medium">Dauergeschlossen</span>
-                                        {% elif device.last_status.override_active and device.last_status.override_mode == 'always_open' %}
-                                            <span class="text-green-600 font-medium">Daueroffen</span>
-                                        {% elif device.last_status.gpio_state %}
-                                            <span class="text-green-600 font-medium">Offen</span>
-                                        {% else %}
-                                            <span class="text-gray-600">Geschlossen</span>
-                                        {% endif %}
-                                        {% if device.last_status.override_active %}
-                                            · <span class="text-orange-500">Override aktiv</span>
-                                        {% else %}
-                                            · {{ device.last_status.current_mode | replace('access_blocked', 'Gesperrt') | replace('always_open', 'Dauerauf') | replace('normal_operation', 'Normal') | default('Normal') }}
-                                        {% endif %}
-                                    {% else %}
-                                        Offline
-                                    {% endif %}
+                                    <template x-if="deviceStatus['{{ device.device_id }}']?.online !== false">
+                                        <span>
+                                            <span x-show="deviceStatus['{{ device.device_id }}']?.override_active && deviceStatus['{{ device.device_id }}']?.override_mode === 'access_blocked'" class="text-red-600 font-medium">Dauergeschlossen</span>
+                                            <span x-show="deviceStatus['{{ device.device_id }}']?.override_active && deviceStatus['{{ device.device_id }}']?.override_mode === 'always_open'" class="text-green-600 font-medium">Daueroffen</span>
+                                            <span x-show="!deviceStatus['{{ device.device_id }}']?.override_active && deviceStatus['{{ device.device_id }}']?.gpio_state" class="text-green-600 font-medium">Offen</span>
+                                            <span x-show="!deviceStatus['{{ device.device_id }}']?.override_active && !deviceStatus['{{ device.device_id }}']?.gpio_state" class="text-gray-600">Geschlossen</span>
+                                            · <span x-text="deviceStatus['{{ device.device_id }}']?.current_mode === 'access_blocked' ? 'Gesperrt' : deviceStatus['{{ device.device_id }}']?.current_mode === 'always_open' ? 'Dauerauf' : 'Normal'">Normal</span>
+                                        </span>
+                                    </template>
+                                    <template x-if="deviceStatus['{{ device.device_id }}']?.online === false">
+                                        <span>Offline</span>
+                                    </template>
                                 </p>
                             </div>
                         </div>
@@ -955,6 +949,18 @@ function shopDashboard() {
     const initialTab = validTabs.includes(hashTab) ? hashTab : 'dashboard';
 
     return {
+            // Device status tracking for real-time updates
+            deviceStatus: {
+                {% for device in devices %}
+                '{{ device.device_id }}': {
+                    online: {{ 'true' if device.online else 'false' }},
+                    gpio_state: {{ 'true' if device.last_status.gpio_state else 'false' }},
+                    current_mode: '{{ device.last_status.current_mode | default(normal_operation) }}',
+                    override_active: {{ 'true' if device.last_status.override_active else 'false' }},
+                    override_mode: '{{ device.last_status.override_mode | default() }}'
+                },
+                {% endfor %}
+            },
             // Special Days state
             specialDays: [],
             showAddSpecialDay: false,
@@ -1071,11 +1077,20 @@ function shopDashboard() {
 
                 if (data.success) {
                     this.success[key] = true;
-                    // Set hash to geraete and reload to show updated status
+                    // Immediately show as open
+                    if (this.deviceStatus[deviceId]) {
+                        this.deviceStatus[deviceId].gpio_state = true;
+                    }
+
+                    // Reset success indicator after 2 seconds
                     setTimeout(() => {
-                        window.location.hash = 'geraete';
-                        window.location.reload();
-                    }, 1500);
+                        this.success[key] = false;
+                    }, 2000);
+
+                    // Refresh status after pulse completes (~4 seconds)
+                    setTimeout(() => {
+                        this.refreshDeviceStatus(deviceId);
+                    }, 4500);
                 } else {
                     alert(data.error || 'Fehler beim Öffnen');
                 }
@@ -1101,11 +1116,16 @@ function shopDashboard() {
 
                 if (data.success) {
                     this.success[key] = true;
-                    // Set hash to geraete and reload to show updated status
+                    // Update status
+                    if (this.deviceStatus[deviceId]) {
+                        this.deviceStatus[deviceId].gpio_state = false;
+                        this.deviceStatus[deviceId].override_active = false;
+                    }
+
                     setTimeout(() => {
-                        window.location.hash = 'geraete';
-                        window.location.reload();
-                    }, 500);
+                        this.success[key] = false;
+                        this.refreshDeviceStatus(deviceId);
+                    }, 1500);
                 } else {
                     alert(data.error || 'Fehler beim Schließen');
                 }
@@ -1129,10 +1149,16 @@ function shopDashboard() {
 
                 if (data.success) {
                     this.success[key] = true;
-                    // Set hash to geraete and reload to show updated status
+                    // Update local status immediately
+                    if (this.deviceStatus[deviceId]) {
+                        this.deviceStatus[deviceId].override_active = true;
+                        this.deviceStatus[deviceId].override_mode = mode;
+                        this.deviceStatus[deviceId].gpio_state = (mode === 'always_open');
+                    }
+
                     setTimeout(() => {
-                        window.location.hash = 'geraete';
-                        window.location.reload();
+                        this.success[key] = false;
+                        this.refreshDeviceStatus(deviceId);
                     }, 1500);
                 } else {
                     alert(data.error || 'Fehler beim Setzen des Override');
@@ -1155,7 +1181,16 @@ function shopDashboard() {
 
                 if (data.success) {
                     this.success[key] = true;
-                    setTimeout(() => { window.location.hash = 'geraete'; window.location.reload(); }, 500);
+                    // Update local status immediately
+                    if (this.deviceStatus[deviceId]) {
+                        this.deviceStatus[deviceId].override_active = false;
+                        this.deviceStatus[deviceId].override_mode = '';
+                    }
+
+                    setTimeout(() => {
+                        this.success[key] = false;
+                        this.refreshDeviceStatus(deviceId);
+                    }, 1500);
                 } else {
                     alert(data.error || 'Fehler beim Aufheben des Override');
                 }
@@ -1173,6 +1208,40 @@ function shopDashboard() {
         },
 
         // Load special days from first online device
+        // Refresh single device status
+        async refreshDeviceStatus(deviceId) {
+            try {
+                const response = await fetch(`/api/commands/${deviceId}/status`, { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success && data.data && this.deviceStatus[deviceId]) {
+                    this.deviceStatus[deviceId].gpio_state = data.data.gpio_state || false;
+                    this.deviceStatus[deviceId].current_mode = data.data.current_mode || 'normal_operation';
+                    this.deviceStatus[deviceId].override_active = data.data.override_active || false;
+                    this.deviceStatus[deviceId].override_mode = data.data.override_mode || '';
+                }
+            } catch (e) {
+                console.error('Status refresh failed:', e);
+            }
+        },
+
+        // Refresh all device statuses
+        async refreshAllDevices() {
+            for (const deviceId of Object.keys(this.deviceStatus)) {
+                await this.refreshDeviceStatus(deviceId);
+            }
+        },
+
+        // Initialize auto-refresh when on Geräte tab
+        initAutoRefresh() {
+            // Refresh every 5 seconds when on Geräte tab
+            setInterval(() => {
+                if (this.activeTab === 'geraete') {
+                    this.refreshAllDevices();
+                }
+            }, 5000);
+        },
+
         async loadSpecialDays() {
             const onlineDevice = this.getFirstOnlineDevice();
             if (!onlineDevice) {
