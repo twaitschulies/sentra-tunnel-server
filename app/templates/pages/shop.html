@@ -5,7 +5,7 @@
 {% block header %}
 <!-- Header -->
 <header class="sticky top-0 z-50 bg-white border-b border-gray-200">
-    <div class="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
         <div class="flex items-center space-x-3">
             <a href="/dashboard"
                class="w-9 h-9 -ml-2 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-smooth">
@@ -30,36 +30,43 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto" x-data="shopDashboard()">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" x-data="shopDashboard()" x-init="if(activeTab === 'feiertage') loadSpecialDays()">
 
     <!-- Tab Navigation -->
     <div class="sticky top-14 z-40 bg-white border-b border-gray-200">
-        <div class="px-4 flex space-x-1">
+        <div class="overflow-x-auto hide-scrollbar">
+            <div class="flex min-w-max px-4 sm:px-0">
             <button @click="activeTab = 'dashboard'; window.location.hash = 'dashboard'"
                     :class="activeTab === 'dashboard' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'"
-                    class="px-4 py-3 text-sm font-medium transition-smooth">
+                    class="px-3 sm:px-4 py-3 text-sm font-medium transition-smooth whitespace-nowrap">
                 Dashboard
             </button>
             <button @click="activeTab = 'ueberwachung'; window.location.hash = 'ueberwachung'"
                     :class="activeTab === 'ueberwachung' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'"
-                    class="px-4 py-3 text-sm font-medium transition-smooth">
+                    class="px-3 sm:px-4 py-3 text-sm font-medium transition-smooth whitespace-nowrap">
                 Überwachung
             </button>
             <button @click="activeTab = 'service'; window.location.hash = 'service'"
                     :class="activeTab === 'service' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'"
-                    class="px-4 py-3 text-sm font-medium transition-smooth">
+                    class="px-3 sm:px-4 py-3 text-sm font-medium transition-smooth whitespace-nowrap">
                 Service
             </button>
             <button @click="activeTab = 'geraete'; window.location.hash = 'geraete'"
                     :class="activeTab === 'geraete' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'"
-                    class="px-4 py-3 text-sm font-medium transition-smooth">
+                    class="px-3 sm:px-4 py-3 text-sm font-medium transition-smooth whitespace-nowrap">
                 Geräte
             </button>
+            <button @click="activeTab = 'feiertage'; window.location.hash = 'feiertage'; loadSpecialDays()"
+                    :class="activeTab === 'feiertage' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'"
+                    class="px-3 sm:px-4 py-3 text-sm font-medium transition-smooth whitespace-nowrap">
+                Feiertage
+            </button>
+            </div>
         </div>
     </div>
 
     <!-- ==================== ÜBERWACHUNG TAB ==================== -->
-    <div x-show="activeTab === 'ueberwachung'" x-cloak class="p-4">
+    <div x-show="activeTab === 'ueberwachung'" x-cloak class="py-4 sm:py-6">
         <h2 class="text-lg font-semibold text-gray-900 mb-1">
             <span class="text-gray-900">Überwachung</span>
             <span class="text-gray-400 font-normal">Standort</span>
@@ -176,7 +183,7 @@
         </div>
 
         <!-- Quick Actions for Monitoring -->
-        <div class="mt-6 grid grid-cols-2 gap-3">
+        <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button class="bg-white rounded-xl p-4 border border-gray-200 hover:border-primary hover:shadow-md transition-smooth text-left">
                 <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mb-2">
                     <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -200,7 +207,7 @@
     </div>
 
     <!-- ==================== SERVICE TAB ==================== -->
-    <div x-show="activeTab === 'service'" x-cloak class="p-4">
+    <div x-show="activeTab === 'service'" x-cloak class="py-4 sm:py-6">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold text-gray-900">
                 <span class="text-gray-900">Service</span>
@@ -349,7 +356,7 @@
     </div>
 
     <!-- ==================== DASHBOARD TAB ==================== -->
-    <div x-show="activeTab === 'dashboard'" x-cloak class="p-4">
+    <div x-show="activeTab === 'dashboard'" x-cloak class="py-4 sm:py-6">
         <div class="flex items-center space-x-2 text-sm text-gray-500 mb-4">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
@@ -362,7 +369,7 @@
         </div>
 
         <!-- KPI Cards -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
             <!-- Umsatz -->
             <div class="bg-gradient-to-br from-cyan-400 to-cyan-500 rounded-2xl p-4 text-white">
                 <div class="h-12 mb-2 opacity-60">
@@ -546,7 +553,7 @@
     </div>
 
     <!-- ==================== GERÄTE TAB ==================== -->
-    <div x-show="activeTab === 'geraete'" x-cloak class="p-4">
+    <div x-show="activeTab === 'geraete'" x-cloak class="py-4 sm:py-6">
         {% if devices %}
         <!-- Quick Stats -->
         <div class="grid grid-cols-2 gap-4 mb-6">
@@ -631,95 +638,123 @@
                     {% if device.online %}
                     {% set is_always_open = device.last_status.override_active and device.last_status.override_mode == 'always_open' %}
                     {% set is_blocked = device.last_status.override_active and device.last_status.override_mode == 'access_blocked' %}
-                    {% set is_normal_closed = not device.last_status.override_active and not device.last_status.gpio_state %}
-                    <div class="grid grid-cols-2 gap-2">
-                        <!-- Kurzzeitig öffnen Button (Pulse) -->
-                        <button @click="openDoor('{{ device.device_id }}')"
-                                :disabled="loading['{{ device.device_id }}_open']"
-                                class="py-3 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-xl
-                                       disabled:opacity-50 transition-smooth flex items-center justify-center space-x-2">
-                            <template x-if="loading['{{ device.device_id }}_open']">
-                                <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                                </svg>
-                            </template>
-                            <template x-if="success['{{ device.device_id }}_open']">
-                                <span>OK</span>
-                            </template>
-                            <template x-if="!loading['{{ device.device_id }}_open'] && !success['{{ device.device_id }}_open']">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
-                                </svg>
-                            </template>
-                            <span x-show="!loading['{{ device.device_id }}_open'] && !success['{{ device.device_id }}_open']" class="text-sm">Kurz öffnen</span>
-                        </button>
-                        <!-- Dauerhaft öffnen Button -->
-                        <button @click="setOverride('{{ device.device_id }}', 'always_open')"
-                                :disabled="loading['{{ device.device_id }}_override']"
-                                class="py-3 text-white font-medium rounded-xl
-                                       disabled:opacity-50 transition-smooth flex items-center justify-center space-x-2
-                                       {% if is_always_open %}bg-green-600 border-4 border-green-400{% else %}bg-gray-600 hover:bg-gray-700{% endif %}">
-                            <template x-if="loading['{{ device.device_id }}_override']">
-                                <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                                </svg>
-                            </template>
-                            <template x-if="success['{{ device.device_id }}_override']">
-                                <span>OK</span>
-                            </template>
-                            <template x-if="!loading['{{ device.device_id }}_override'] && !success['{{ device.device_id }}_override']">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                </svg>
-                            </template>
-                            <span x-show="!loading['{{ device.device_id }}_override'] && !success['{{ device.device_id }}_override']" class="text-sm">Dauer-Auf</span>
-                        </button>
-                        <!-- Dauergeschlossen Button -->
-                        <button @click="setOverride('{{ device.device_id }}', 'access_blocked')"
-                                :disabled="loading['{{ device.device_id }}_blocked']"
-                                class="py-3 text-white font-medium rounded-xl
-                                       disabled:opacity-50 transition-smooth flex items-center justify-center space-x-2
-                                       {% if is_blocked %}bg-red-600 border-4 border-red-400{% else %}bg-gray-600 hover:bg-gray-700{% endif %}">
-                            <template x-if="loading['{{ device.device_id }}_blocked']">
-                                <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                                </svg>
-                            </template>
-                            <template x-if="success['{{ device.device_id }}_blocked']">
-                                <span>OK</span>
-                            </template>
-                            <template x-if="!loading['{{ device.device_id }}_blocked'] && !success['{{ device.device_id }}_blocked']">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-                                </svg>
-                            </template>
-                            <span x-show="!loading['{{ device.device_id }}_blocked'] && !success['{{ device.device_id }}_blocked']" class="text-xs">Dauergeschl.</span>
-                        </button>
-                        <!-- Schließen Button -->
-                        <button @click="closeDoor('{{ device.device_id }}')"
-                                :disabled="loading['{{ device.device_id }}_close']"
-                                class="py-3 text-white font-medium rounded-xl
-                                       disabled:opacity-50 transition-smooth flex items-center justify-center space-x-2
-                                       {% if is_normal_closed %}bg-blue-600 border-4 border-blue-400{% else %}bg-gray-600 hover:bg-gray-700{% endif %}">
-                            <template x-if="loading['{{ device.device_id }}_close']">
-                                <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                                </svg>
-                            </template>
-                            <template x-if="success['{{ device.device_id }}_close']">
-                                <span>OK</span>
-                            </template>
-                            <template x-if="!loading['{{ device.device_id }}_close'] && !success['{{ device.device_id }}_close']">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                                </svg>
-                            </template>
-                            <span x-show="!loading['{{ device.device_id }}_close'] && !success['{{ device.device_id }}_close']" class="text-sm">Schließen</span>
-                        </button>
+                    {% set is_normal = not device.last_status.override_active %}
+                    <div class="space-y-2">
+                        <!-- Top row: 3 buttons -->
+                        <div class="grid grid-cols-3 gap-2">
+                            <!-- Kurzzeitig öffnen Button (Pulse) -->
+                            <button @click="openDoor('{{ device.device_id }}')"
+                                    :disabled="loading['{{ device.device_id }}_open']"
+                                    class="py-3 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-xl
+                                           disabled:opacity-50 transition-smooth flex items-center justify-center space-x-1">
+                                <template x-if="loading['{{ device.device_id }}_open']">
+                                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                    </svg>
+                                </template>
+                                <template x-if="success['{{ device.device_id }}_open']">
+                                    <span>OK</span>
+                                </template>
+                                <template x-if="!loading['{{ device.device_id }}_open'] && !success['{{ device.device_id }}_open']">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+                                    </svg>
+                                </template>
+                                <span x-show="!loading['{{ device.device_id }}_open'] && !success['{{ device.device_id }}_open']" class="text-xs">Kurz</span>
+                            </button>
+                            <!-- Normalbetrieb Button -->
+                            <button @click="clearOverride('{{ device.device_id }}')"
+                                    :disabled="loading['{{ device.device_id }}_clear']"
+                                    class="py-3 text-white font-medium rounded-xl
+                                           disabled:opacity-50 transition-smooth flex items-center justify-center space-x-1
+                                           {% if is_normal %}bg-blue-600 border-4 border-blue-400{% else %}bg-gray-600 hover:bg-gray-700{% endif %}">
+                                <template x-if="loading['{{ device.device_id }}_clear']">
+                                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                    </svg>
+                                </template>
+                                <template x-if="success['{{ device.device_id }}_clear']">
+                                    <span>OK</span>
+                                </template>
+                                <template x-if="!loading['{{ device.device_id }}_clear'] && !success['{{ device.device_id }}_clear']">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                </template>
+                                <span x-show="!loading['{{ device.device_id }}_clear'] && !success['{{ device.device_id }}_clear']" class="text-xs">Normal</span>
+                            </button>
+                            <!-- Dauerhaft öffnen Button -->
+                            <button @click="setOverride('{{ device.device_id }}', 'always_open')"
+                                    :disabled="loading['{{ device.device_id }}_override']"
+                                    class="py-3 text-white font-medium rounded-xl
+                                           disabled:opacity-50 transition-smooth flex items-center justify-center space-x-1
+                                           {% if is_always_open %}bg-green-600 border-4 border-green-400{% else %}bg-gray-600 hover:bg-gray-700{% endif %}">
+                                <template x-if="loading['{{ device.device_id }}_override']">
+                                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                    </svg>
+                                </template>
+                                <template x-if="success['{{ device.device_id }}_override']">
+                                    <span>OK</span>
+                                </template>
+                                <template x-if="!loading['{{ device.device_id }}_override'] && !success['{{ device.device_id }}_override']">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </template>
+                                <span x-show="!loading['{{ device.device_id }}_override'] && !success['{{ device.device_id }}_override']" class="text-xs">Dauer-Auf</span>
+                            </button>
+                        </div>
+                        <!-- Bottom row: 2 buttons -->
+                        <div class="grid grid-cols-2 gap-2">
+                            <!-- Dauergeschlossen Button -->
+                            <button @click="setOverride('{{ device.device_id }}', 'access_blocked')"
+                                    :disabled="loading['{{ device.device_id }}_blocked']"
+                                    class="py-3 text-white font-medium rounded-xl
+                                           disabled:opacity-50 transition-smooth flex items-center justify-center space-x-1
+                                           {% if is_blocked %}bg-red-600 border-4 border-red-400{% else %}bg-gray-600 hover:bg-gray-700{% endif %}">
+                                <template x-if="loading['{{ device.device_id }}_blocked']">
+                                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                    </svg>
+                                </template>
+                                <template x-if="success['{{ device.device_id }}_blocked']">
+                                    <span>OK</span>
+                                </template>
+                                <template x-if="!loading['{{ device.device_id }}_blocked'] && !success['{{ device.device_id }}_blocked']">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                                    </svg>
+                                </template>
+                                <span x-show="!loading['{{ device.device_id }}_blocked'] && !success['{{ device.device_id }}_blocked']" class="text-xs">Dauer-Zu</span>
+                            </button>
+                            <!-- Schließen Button -->
+                            <button @click="closeDoor('{{ device.device_id }}')"
+                                    :disabled="loading['{{ device.device_id }}_close']"
+                                    class="py-3 text-white font-medium rounded-xl
+                                           disabled:opacity-50 transition-smooth flex items-center justify-center space-x-1
+                                           bg-gray-600 hover:bg-gray-700">
+                                <template x-if="loading['{{ device.device_id }}_close']">
+                                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                    </svg>
+                                </template>
+                                <template x-if="success['{{ device.device_id }}_close']">
+                                    <span>OK</span>
+                                </template>
+                                <template x-if="!loading['{{ device.device_id }}_close'] && !success['{{ device.device_id }}_close']">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                    </svg>
+                                </template>
+                                <span x-show="!loading['{{ device.device_id }}_close'] && !success['{{ device.device_id }}_close']" class="text-xs">Schließen</span>
+                            </button>
+                        </div>
                     </div>
                     {% else %}
                     <button disabled class="w-full py-3 bg-gray-100 text-gray-400 font-medium rounded-xl cursor-not-allowed">
@@ -744,6 +779,127 @@
             <p class="text-gray-500">In diesem Shop sind noch keine Geräte registriert.</p>
         </div>
         {% endif %}
+    </div>
+
+    <!-- ==================== FEIERTAGE TAB ==================== -->
+    <div x-show="activeTab === 'feiertage'" x-cloak class="py-4 sm:py-6">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">Feiertage & Sondertage</h2>
+                <p class="text-sm text-gray-500">Sondertage überschreiben die normale Zeitsteuerung</p>
+            </div>
+            <button @click="showAddSpecialDay = true"
+                    class="px-4 py-2 bg-primary text-white text-sm font-medium rounded-xl hover:bg-primary-dark transition-smooth">
+                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Hinzufügen
+            </button>
+        </div>
+
+        <!-- Special Days List -->
+        <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+            <template x-if="specialDays.length === 0">
+                <div class="p-8 text-center text-gray-500">
+                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    <p>Keine Sondertage konfiguriert</p>
+                </div>
+            </template>
+            <template x-if="specialDays.length > 0">
+                <div class="divide-y divide-gray-100">
+                    <template x-for="day in specialDays" :key="day.date">
+                        <div class="flex items-center justify-between px-4 py-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-lg flex items-center justify-center"
+                                     :class="day.mode === 'access_blocked' ? 'bg-red-100' : day.mode === 'always_open' ? 'bg-green-100' : 'bg-blue-100'">
+                                    <svg class="w-5 h-5" :class="day.mode === 'access_blocked' ? 'text-red-600' : day.mode === 'always_open' ? 'text-green-600' : 'text-blue-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="font-medium text-gray-900" x-text="day.name"></p>
+                                    <p class="text-sm text-gray-500" x-text="formatDate(day.date)"></p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <span class="px-2 py-1 text-xs rounded-lg"
+                                      :class="day.mode === 'access_blocked' ? 'bg-red-100 text-red-700' : day.mode === 'always_open' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'"
+                                      x-text="day.mode === 'access_blocked' ? 'Geschlossen' : day.mode === 'always_open' ? 'Daueroffen' : 'Normalbetrieb'">
+                                </span>
+                                <button @click="deleteSpecialDay(day.date)"
+                                        class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-smooth">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div>
+
+        <!-- Info Box -->
+        <div class="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
+            <div class="flex items-start space-x-3">
+                <svg class="w-5 h-5 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <div class="text-sm text-blue-800">
+                    <p class="font-medium">Priorität der Modi:</p>
+                    <ol class="mt-1 ml-4 list-decimal">
+                        <li>Override (höchste) - Manuelle temporäre Überschreibung</li>
+                        <li>Sondertage - Gilt für den gesamten Tag</li>
+                        <li>Zeitbasierter Modus - Wochentage + Uhrzeiten</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Special Day Modal -->
+    <div x-show="showAddSpecialDay" x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+         @click.self="showAddSpecialDay = false">
+        <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-xl">
+            <div class="p-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Sondertag hinzufügen</h3>
+            </div>
+            <div class="p-4 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Datum</label>
+                    <input type="date" x-model="newSpecialDay.date"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Bezeichnung</label>
+                    <input type="text" x-model="newSpecialDay.name" placeholder="z.B. Neujahr, Weihnachten"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Modus</label>
+                    <select x-model="newSpecialDay.mode"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary">
+                        <option value="access_blocked">🔴 Geschlossen (Zugang gesperrt)</option>
+                        <option value="always_open">🟢 Daueroffen (Freier Zugang)</option>
+                        <option value="normal_operation">🔵 Normalbetrieb</option>
+                    </select>
+                </div>
+            </div>
+            <div class="p-4 bg-gray-50 flex justify-end space-x-3">
+                <button @click="showAddSpecialDay = false"
+                        class="px-4 py-2 text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300 transition-smooth">
+                    Abbrechen
+                </button>
+                <button @click="addSpecialDay()"
+                        class="px-4 py-2 text-white bg-primary rounded-xl hover:bg-primary-dark transition-smooth">
+                    Hinzufügen
+                </button>
+            </div>
+        </div>
+    </div>
 
         {% if user.role == 'admin' %}
         <!-- Add Device FAB -->
@@ -791,11 +947,20 @@
 <script>
 function shopDashboard() {
     // Read tab from URL hash, default to 'dashboard'
-    const validTabs = ['dashboard', 'ueberwachung', 'service', 'geraete'];
+    const validTabs = ['dashboard', 'ueberwachung', 'service', 'geraete', 'feiertage'];
     const hashTab = window.location.hash.replace('#', '');
     const initialTab = validTabs.includes(hashTab) ? hashTab : 'dashboard';
 
     return {
+            // Special Days state
+            specialDays: [],
+            showAddSpecialDay: false,
+            newSpecialDay: {
+                date: new Date().toISOString().split('T')[0],
+                name: '',
+                mode: 'access_blocked'
+            },
+            firstOnlineDeviceId: '{% for d in devices %}{% if d.online %}{{ d.device_id }}{% endif %}{% endfor %}',
         activeTab: initialTab,
         loading: {},
         success: {},
@@ -924,6 +1089,10 @@ function shopDashboard() {
             this.success[key] = false;
 
             try {
+                // First clear any active override to return to normal mode
+                await fetch(`/api/commands/${deviceId}/override`, { method: 'DELETE' });
+                
+                // Then close the door
                 const response = await fetch(`/api/commands/${deviceId}/close`, { method: 'POST' });
                 const data = await response.json();
 
@@ -933,7 +1102,7 @@ function shopDashboard() {
                     setTimeout(() => {
                         window.location.hash = 'geraete';
                         window.location.reload();
-                    }, 1500);
+                    }, 500);
                 } else {
                     alert(data.error || 'Fehler beim Schließen');
                 }
@@ -983,7 +1152,7 @@ function shopDashboard() {
 
                 if (data.success) {
                     this.success[key] = true;
-                    setTimeout(() => { this.success[key] = false; }, 2000);
+                    setTimeout(() => { window.location.hash = 'geraete'; window.location.reload(); }, 500);
                 } else {
                     alert(data.error || 'Fehler beim Aufheben des Override');
                 }
@@ -991,6 +1160,98 @@ function shopDashboard() {
                 alert('Verbindungsfehler');
             } finally {
                 this.loading[key] = false;
+            }
+        },
+
+        // Format date for display
+        formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        },
+
+        // Load special days from first online device
+        async loadSpecialDays() {
+            const onlineDevice = this.getFirstOnlineDevice();
+            if (!onlineDevice) {
+                console.log('No online device found');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/commands/${onlineDevice}/special_days`);
+                const data = await response.json();
+                if (data.success) {
+                    this.specialDays = (data.data && data.data.special_days) || [];
+                }
+            } catch (e) {
+                console.error('Error loading special days:', e);
+            }
+        },
+
+        // Get first online device ID
+        getFirstOnlineDevice() {
+            // This will be set from the template
+            return this.firstOnlineDeviceId || null;
+        },
+
+        // Add special day
+        async addSpecialDay() {
+            const onlineDevice = this.getFirstOnlineDevice();
+            if (!onlineDevice) {
+                alert('Kein Gerät online');
+                return;
+            }
+
+            if (!this.newSpecialDay.date || !this.newSpecialDay.name) {
+                alert('Bitte alle Felder ausfüllen');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/commands/${onlineDevice}/special_days`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(this.newSpecialDay)
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    this.showAddSpecialDay = false;
+                    this.newSpecialDay = { date: new Date().toISOString().split('T')[0], name: '', mode: 'access_blocked' };
+                    await this.loadSpecialDays();
+                } else {
+                    alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
+                }
+            } catch (e) {
+                alert('Verbindungsfehler');
+            }
+        },
+
+        // Delete special day
+        async deleteSpecialDay(date) {
+            if (!confirm('Sondertag wirklich löschen?')) return;
+
+            const onlineDevice = this.getFirstOnlineDevice();
+            if (!onlineDevice) {
+                alert('Kein Gerät online');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/commands/${onlineDevice}/special_days`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    await this.loadSpecialDays();
+                } else {
+                    alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
+                }
+            } catch (e) {
+                alert('Verbindungsfehler');
             }
         },
 

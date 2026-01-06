@@ -5,7 +5,7 @@
 {% block header %}
 <!-- Sticky Header with Glassmorphism -->
 <header class="sticky top-0 z-50 glass-card border-b border-white/20">
-    <div class="max-w-2xl mx-auto px-6 h-16 flex items-center justify-between">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div class="flex items-center space-x-4">
             <!-- Logo with gradient -->
             <div class="w-10 h-10 btn-gradient rounded-xl flex items-center justify-center shadow-button">
@@ -83,11 +83,11 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto px-6 py-8" x-data="dashboard()">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8" x-data="dashboard()">
 
     {% if shops %}
     <!-- Stats Overview -->
-    <div class="grid grid-cols-3 gap-4 mb-8">
+    <div class="grid grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <div class="glass-card rounded-2xl p-4 text-center">
             <div class="text-3xl font-bold text-gradient">{{ shops|length }}</div>
             <div class="text-xs text-text-secondary mt-1 font-medium">Shops</div>
@@ -109,7 +109,7 @@
     </div>
 
     <!-- Shop Cards -->
-    <div class="space-y-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {% for shop in shops %}
         <a href="/shop/{{ shop.id }}"
            class="block bg-white rounded-3xl p-5 shadow-card card-shine
